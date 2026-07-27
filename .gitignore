@@ -12,6 +12,10 @@
 /build
 /storybook-static
 
+# Local file uploads (Fase 1 dev-only storage — swap for object storage later)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
 # Env files
 .env
 .env*.local

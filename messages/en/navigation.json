@@ -1,8 +1,9 @@
 {
   "home": "Home",
-  "about": "About",
-  "signIn": "Sign In",
-  "getStarted": "Get Started",
+  "rooms": "Rooms",
+  "location": "Location",
+  "contact": "Contact",
+  "signIn": "Admin Sign In",
   "openMenu": "Open menu",
   "closeMenu": "Close menu"
 }

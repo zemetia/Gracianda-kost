@@ -1,0 +1,23 @@
+// status is NOT stored — derived in paymentService.getPaymentStatus() from
+// amountPaid/amountDue/dueDate vs today, so a stale cron/manual step can
+// never leave a payment showing the wrong status.
+model Payment {
+  id         String   @id @default(cuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+
+  periodMonth Int // 1-12
+  periodYear  Int
+  amountDue   Decimal   @db.Decimal(12, 2)
+  amountPaid  Decimal   @default(0) @db.Decimal(12, 2)
+  dueDate     DateTime
+  paidAt      DateTime?
+  method      String? // "Transfer BCA", "Tunai"
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([contractId, periodMonth, periodYear])
+  @@map("payments")
+}

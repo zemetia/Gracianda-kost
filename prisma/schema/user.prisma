@@ -5,17 +5,23 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  role          UserRole  @default(USER)
+  role          UserRole  @default(OPERASIONAL)
+  // Soft delete — a user with AuditLog rows can never be hard-deleted (FK restrict),
+  // and keeping the row keeps historical audit entries attributable.
+  isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
+  accounts  Account[]
+  sessions  Session[]
+  auditLogs AuditLog[]
 
   @@map("users")
 }
 
 enum UserRole {
-  USER
-  ADMIN
+  SUPER_ADMIN
+  OPERASIONAL
+  KEUANGAN
+  SECURITY
 }

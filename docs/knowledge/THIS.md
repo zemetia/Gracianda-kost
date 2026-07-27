@@ -53,3 +53,7 @@
 <!-- Format: `[YYYY-MM-DD] insight` -->
 
 - [2026-06-06] Developer explicitly designed a two-tier learning system: THIS.md for general knowledge, LEARN.md for corrections — treat both as first-class project docs
+- [2026-07-27] Pola guard route admin: `canAccess()` + `<Forbidden />` di layout/page, `requireRole()` (throw) di Server Action — jangan campur
+- [2026-07-27] Entity yang punya relasi ke `AuditLog` (mis. `User`) tidak boleh hard delete — FK restrict akan menolak dan jejak audit hilang; pakai flag `isActive` seperti `Room`
+- [2026-07-27] Rahasia (password, token) tidak pernah masuk payload `AuditLog` — cukup flag seperti `passwordChanged: true`
+- [2026-07-27] Developer tidak mau container proyek lain diganggu saat port bentrok — pilih pindahkan port proyek ini (Postgres lokal sekarang di `5434`, bukan `5433`)

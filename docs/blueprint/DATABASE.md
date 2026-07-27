@@ -161,8 +161,9 @@ const session = await getSession();
 // Throws 'Unauthorized' if not signed in
 const session = await requireAuth();
 
-// Throws 'Forbidden' if role doesn't match
-const session = await requireRole('ADMIN');
+// Throws 'Forbidden' if role doesn't match (accepts a single role or an array)
+const session = await requireRole('SUPER_ADMIN');
+const session = await requireRole(['SUPER_ADMIN', 'KEUANGAN']);
 
 // Access user from session
 session.user.id    // string
