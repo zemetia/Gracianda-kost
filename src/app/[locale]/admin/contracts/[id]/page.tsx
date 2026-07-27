@@ -18,6 +18,19 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: 'Dibatalkan',
 };
 
+const CYCLE_LABEL: Record<string, string> = {
+  DAILY: 'Harian',
+  WEEKLY: 'Mingguan',
+  MONTHLY: 'Bulanan',
+  YEARLY: 'Tahunan',
+};
+
+function formatBillingCycle(cycle: string, interval: number): string {
+  const label = CYCLE_LABEL[cycle] || cycle;
+  if (interval === 1) return label;
+  return `${interval} ${label}`;
+}
+
 export default async function ContractDetailPage({ params }: Props) {
   const { id } = await params;
   const contract = await contractService.getById(id);
@@ -34,7 +47,7 @@ export default async function ContractDetailPage({ params }: Props) {
             <Link href={`/admin/tenants/${contract.tenantId}`} className="hover:underline">
               {contract.tenant.fullName}
             </Link>{' '}
-            · Kamar {contract.room.number} ({contract.room.floor.name})
+            · {contract.room.property.name} · Unit {contract.room.number} {contract.room.floor ? `(${contract.room.floor.name})` : ''}
           </Typography>
         </div>
         <Badge variant={contract.status === 'ACTIVE' ? 'success' : 'outline'}>
@@ -49,7 +62,9 @@ export default async function ContractDetailPage({ params }: Props) {
         <CardContent className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <Typography variant="muted">Harga Sewa</Typography>
-            <Typography variant="p">Rp {contract.rentPrice.toNumber().toLocaleString('id-ID')}</Typography>
+            <Typography variant="p">
+              Rp {contract.rentPrice.toNumber().toLocaleString('id-ID')} / {formatBillingCycle(contract.billingCycle, contract.billingInterval)}
+            </Typography>
           </div>
           <div>
             <Typography variant="muted">Deposit</Typography>
@@ -62,11 +77,17 @@ export default async function ContractDetailPage({ params }: Props) {
             <Typography variant="p">{contract.startDate.toLocaleDateString('id-ID')}</Typography>
           </div>
           <div>
-            <Typography variant="muted">Tanggal Keluar</Typography>
+            <Typography variant="muted">Tanggal Keluar (Target)</Typography>
             <Typography variant="p">
-              {contract.actualEndDate ? contract.actualEndDate.toLocaleDateString('id-ID') : '—'}
+              {contract.endDate ? contract.endDate.toLocaleDateString('id-ID') : '—'}
             </Typography>
           </div>
+          {contract.actualEndDate && (
+            <div>
+              <Typography variant="muted">Tanggal Keluar Aktual</Typography>
+              <Typography variant="p">{contract.actualEndDate.toLocaleDateString('id-ID')}</Typography>
+            </div>
+          )}
           {contract.notes && (
             <div className="col-span-2">
               <Typography variant="muted">Catatan</Typography>

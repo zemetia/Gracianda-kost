@@ -125,7 +125,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3 text-foreground-muted">{payment.contract.tenant.fullName}</td>
                 <td className="px-4 py-3 text-foreground-muted">
-                  {payment.contract.room.number} ({payment.contract.room.floor.name})
+                  {payment.contract.room.property.name} — No. {payment.contract.room.number} {payment.contract.room.floor ? `(${payment.contract.room.floor.name})` : ''}
                 </td>
                 <td className="px-4 py-3 text-foreground-muted">
                   {MONTH_NAMES_ID[payment.periodMonth - 1]} {payment.periodYear}

@@ -56,6 +56,8 @@ export async function createContractAction(
     roomId: formData.get('roomId'),
     rentPrice: formData.get('rentPrice'),
     deposit: formData.get('deposit') || undefined,
+    billingCycle: formData.get('billingCycle') || undefined,
+    billingInterval: formData.get('billingInterval') || undefined,
     startDate: formData.get('startDate'),
     endDate: formData.get('endDate') || undefined,
     notes: formData.get('notes') || undefined,

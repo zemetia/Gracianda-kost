@@ -18,12 +18,18 @@ export interface RoomFormState {
 function parseRoomForm(formData: FormData) {
   return roomSchema.safeParse({
     number: formData.get('number'),
-    floorId: formData.get('floorId'),
+    propertyId: formData.get('propertyId'),
+    floorId: formData.get('floorId') || undefined,
     price: formData.get('price'),
     sizeSqm: formData.get('sizeSqm') || undefined,
     description: formData.get('description') || undefined,
-    isActive: formData.get('isActive') === 'on',
+    isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
     facilityIds: formData.getAll('facilityIds'),
+    priceDaily: formData.get('priceDaily') || undefined,
+    priceWeekly: formData.get('priceWeekly') || undefined,
+    priceQuarterly: formData.get('priceQuarterly') || undefined,
+    priceSemiAnnual: formData.get('priceSemiAnnual') || undefined,
+    priceYearly: formData.get('priceYearly') || undefined,
   });
 }
 
@@ -105,6 +111,7 @@ export async function createFloorAction(
   const parsed = floorSchema.safeParse({
     name: formData.get('name'),
     order: formData.get('order'),
+    propertyId: formData.get('propertyId'),
   });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 

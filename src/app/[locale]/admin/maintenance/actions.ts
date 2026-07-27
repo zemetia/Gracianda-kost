@@ -21,6 +21,7 @@ export async function createMaintenanceAction(
   const session = await requireRole(CAN_MANAGE);
   const parsed = maintenanceSchema.safeParse({
     scope: formData.get('scope'),
+    propertyId: formData.get('propertyId'),
     roomId: formData.get('roomId') || undefined,
     category: formData.get('category'),
     date: formData.get('date'),

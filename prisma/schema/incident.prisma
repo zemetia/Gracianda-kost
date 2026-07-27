@@ -14,13 +14,15 @@ enum IncidentStatus {
 }
 
 model Incident {
-  id       String           @id @default(cuid())
-  category IncidentCategory
-  status   IncidentStatus   @default(OPEN)
-  date     DateTime
-  roomId   String?
-  room     Room?            @relation(fields: [roomId], references: [id])
-  location String? // non-room location, e.g. "Parkiran"
+  id         String           @id @default(cuid())
+  category   IncidentCategory
+  status     IncidentStatus   @default(OPEN)
+  date       DateTime
+  propertyId String
+  property   Property         @relation(fields: [propertyId], references: [id])
+  roomId     String?
+  room       Room?            @relation(fields: [roomId], references: [id])
+  location   String? // non-room location, e.g. "Parkiran"
 
   description String
 
@@ -29,5 +31,6 @@ model Incident {
 
   @@index([roomId, date])
   @@index([status])
+  @@index([propertyId])
   @@map("incidents")
 }

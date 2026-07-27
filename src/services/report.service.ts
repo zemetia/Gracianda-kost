@@ -10,6 +10,7 @@ import { getPaymentStatus } from './payment.service';
 export interface ReportFilter {
   from?: Date;
   to?: Date;
+  propertyId?: string;
   floorId?: string;
   roomId?: string;
 }
@@ -17,6 +18,7 @@ export interface ReportFilter {
 function roomScopeWhere(filter: ReportFilter): Prisma.RoomWhereInput | undefined {
   if (filter.roomId) return { id: filter.roomId };
   if (filter.floorId) return { floorId: filter.floorId };
+  if (filter.propertyId) return { propertyId: filter.propertyId };
   return undefined;
 }
 
@@ -39,7 +41,8 @@ export const reportService = {
         ...(filter.from || filter.to
           ? { date: { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) } }
           : {}),
-        ...(roomWhere && { room: roomWhere }),
+        ...(filter.propertyId && { propertyId: filter.propertyId }),
+        ...(!filter.propertyId && roomWhere && { room: roomWhere }),
       },
       select: { cost: true, room: { select: { id: true, number: true } } },
     });
@@ -114,7 +117,8 @@ export const reportService = {
         ...(filter.from || filter.to
           ? { date: { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) } }
           : {}),
-        ...(roomWhere && { room: roomWhere }),
+        ...(filter.propertyId && { propertyId: filter.propertyId }),
+        ...(!filter.propertyId && roomWhere && { room: roomWhere }),
       },
       include: { room: { include: { floor: true } } },
     });
@@ -145,7 +149,8 @@ export const reportService = {
         ...(filter.from || filter.to
           ? { date: { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) } }
           : {}),
-        ...(roomWhere && { room: roomWhere }),
+        ...(filter.propertyId && { propertyId: filter.propertyId }),
+        ...(!filter.propertyId && roomWhere && { room: roomWhere }),
       },
     });
 

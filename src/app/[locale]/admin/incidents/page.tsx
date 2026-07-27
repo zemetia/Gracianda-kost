@@ -146,7 +146,7 @@ export default async function IncidentsPage({ searchParams }: Props) {
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-foreground-muted">
-                  {incident.room ? `Kamar ${incident.room.number} (${incident.room.floor.name})` : incident.location ?? '—'}
+                  {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>

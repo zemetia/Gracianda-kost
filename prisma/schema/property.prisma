@@ -1,7 +1,36 @@
+enum PropertyType {
+  KOST
+  HOUSE
+  APARTMENT
+  VILLA
+  OTHER
+}
+
+model Property {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  code        String       @unique
+  address     String?
+  description String?
+  type        PropertyType @default(KOST)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  floors      Floor[]
+  rooms       Room[]
+  maintenance MaintenanceRecord[]
+  incidents   Incident[]
+
+  @@map("properties")
+}
+
 model Floor {
-  id    String @id @default(cuid())
-  name  String
-  order Int
+  id         String   @id @default(cuid())
+  name       String
+  order      Int
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
 
   rooms Room[]
 
@@ -10,9 +39,11 @@ model Floor {
 
 model Room {
   id          String   @id @default(cuid())
-  number      String   @unique
-  floorId     String
-  floor       Floor    @relation(fields: [floorId], references: [id])
+  number      String
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  floorId     String?
+  floor       Floor?   @relation(fields: [floorId], references: [id])
   price       Decimal  @db.Decimal(12, 2)
   sizeSqm     Decimal? @db.Decimal(5, 2)
   description String?
@@ -24,7 +55,9 @@ model Room {
   contracts   Contract[]
   maintenance MaintenanceRecord[]
   incidents   Incident[]
+  prices      RoomPrice[]
 
+  @@unique([propertyId, number])
   @@map("rooms")
 }
 
@@ -62,4 +95,26 @@ model Promo {
   createdAt   DateTime @default(now())
 
   @@map("promos")
+}
+
+enum BillingCycle {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RoomPrice {
+  id           String       @id @default(cuid())
+  roomId       String
+  room         Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  billingCycle BillingCycle
+  interval     Int          @default(1)
+  price        Decimal      @db.Decimal(12, 2)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([roomId, billingCycle, interval])
+  @@map("room_prices")
 }

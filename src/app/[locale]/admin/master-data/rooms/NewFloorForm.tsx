@@ -9,11 +9,13 @@ import { createFloorAction, type FloorFormState } from './actions';
 
 const initialState: FloorFormState = {};
 
-export function NewFloorForm() {
+export function NewFloorForm({ propertyId }: { propertyId: string }) {
   const [state, formAction, isPending] = useActionState(createFloorAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="propertyId" value={propertyId} />
+      
       <Input
         label="Nama Lantai"
         name="name"

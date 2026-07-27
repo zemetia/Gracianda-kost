@@ -12,20 +12,42 @@
   },
   "facilities": {
     "heading": "Shared Facilities",
-    "subheading": "Common facilities available to every resident"
+    "subheading": "Premium amenities designed to support your daily comfort and productivity."
   },
   "promo": {
     "heading": "Current Promo"
   },
   "rooms": {
-    "heading": "Room Floor Plan",
-    "subheading": "Click a room for details — green is available, red is occupied"
+    "heading": "Interactive Floor Plan",
+    "subheading": "Select a floor and click a room number to view photo details, price, facilities, and availability status."
+  },
+  "gallery": {
+    "heading": "Residential Gallery",
+    "subheading": "Take a peek at the clean, neat, and well-maintained spaces of Gracianda House."
+  },
+  "nearby": {
+    "heading": "Location & Accessibility",
+    "subheading": "Situated in a strategic location that simplifies your daily mobility.",
+    "landmarks": {
+      "campus": "Campuses & Education",
+      "transit": "Public Transport",
+      "mall": "Shopping Centers",
+      "hospital": "Healthcare Facilities"
+    }
+  },
+  "testimonials": {
+    "heading": "Resident Reviews",
+    "subheading": "Listen directly to the stories of those who have experienced living in Gracianda House."
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions (FAQ)",
+    "subheading": "Have questions about Gracianda House? Find the answers here."
   },
   "location": {
-    "heading": "Location"
+    "heading": "Our Location"
   },
   "contact": {
-    "heading": "Contact Us",
-    "cta": "Chat on WhatsApp"
+    "heading": "Have Any Further Questions?",
+    "cta": "Contact Us via WhatsApp"
   }
 }

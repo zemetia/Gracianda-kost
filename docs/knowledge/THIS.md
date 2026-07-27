@@ -52,6 +52,8 @@
 <!-- Add dated insights here as they are discovered -->
 <!-- Format: `[YYYY-MM-DD] insight` -->
 
+- [2026-07-27] Redesign halaman landing page public dengan UI bertumpuk (Stacked Floor Plan) untuk simulasi gedung hunian kost riil serta memperkaya section dengan visual premium nyata.
+
 - [2026-06-06] Developer explicitly designed a two-tier learning system: THIS.md for general knowledge, LEARN.md for corrections — treat both as first-class project docs
 - [2026-07-27] Pola guard route admin: `canAccess()` + `<Forbidden />` di layout/page, `requireRole()` (throw) di Server Action — jangan campur
 - [2026-07-27] Entity yang punya relasi ke `AuditLog` (mis. `User`) tidak boleh hard delete — FK restrict akan menolak dan jejak audit hilang; pakai flag `isActive` seperti `Room`

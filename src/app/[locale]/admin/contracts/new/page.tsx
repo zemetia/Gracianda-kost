@@ -20,7 +20,14 @@ export default async function NewContractPage() {
               id: r.id,
               number: r.number,
               price: r.price.toNumber(),
-              floor: { name: r.floor.name },
+              floor: r.floor ? { name: r.floor.name } : null,
+              property: { name: r.property.name },
+              prices: r.prices.map((p) => ({
+                id: p.id,
+                billingCycle: p.billingCycle,
+                interval: p.interval,
+                price: p.price.toNumber(),
+              })),
             }))}
           />
         </CardContent>

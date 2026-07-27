@@ -4,10 +4,12 @@ enum MaintenanceScope {
 }
 
 model MaintenanceRecord {
-  id     String           @id @default(cuid())
-  scope  MaintenanceScope
-  roomId String? // required if scope = ROOM, null if BUILDING
-  room   Room?            @relation(fields: [roomId], references: [id])
+  id         String           @id @default(cuid())
+  scope      MaintenanceScope
+  propertyId String
+  property   Property         @relation(fields: [propertyId], references: [id])
+  roomId     String? // required if scope = ROOM, null if BUILDING
+  room       Room?            @relation(fields: [roomId], references: [id])
 
   category String // free text, datalist-suggested in the UI — not an enum
   date     DateTime
@@ -18,5 +20,6 @@ model MaintenanceRecord {
   createdAt DateTime @default(now())
 
   @@index([roomId, date])
+  @@index([propertyId])
   @@map("maintenance_records")
 }

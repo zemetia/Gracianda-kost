@@ -8,6 +8,8 @@
 
 <!-- Entries below, newest first -->
 
+[2026-07-27] - Import 'buildRoomInquiryMessage' di RoomFloorPlan.tsx tidak digunakan dan memicu kegagalan type-check compiler strict - Hapus import yang tidak terpakai dan bersihkan kode - Selalu bersihkan import yang tidak terpakai agar tsc --noEmit keluar dengan exit code 0
+
 [2026-07-27] - `requireRole()` dipakai langsung di page/layout admin, padahal fungsi itu `throw new Error('Forbidden')` — role yang tidak berhak dapat error boundary (500), bukan 403; dan di production `error.message` diredaksi jadi tidak bisa dibedakan dari crash biasa - Tambah `canAccess()` (non-throwing) di `src/lib/auth.ts` + komponen `<Forbidden />`; page/layout pakai `canAccess`, Server Action tetap pakai `requireRole` - Guard di UI dan guard di mutasi punya kebutuhan berbeda: UI harus merender penolakan, mutasi harus gagal keras
 
 [2026-07-27] - `/admin/master-data/*` (kamar, fasilitas, promo) tidak punya layout guard sama sekali sejak Fase 1 — semua role bisa membuka list-nya, hanya Server Action mutasinya yang dijaga `requireRole` - Tambah `master-data/layout.tsx` → `SUPER_ADMIN|OPERASIONAL` - Setiap kali menambah section admin baru, guard route (layout) dan guard mutasi (action) harus dipasang berpasangan; jangan anggap guard mutasi sudah cukup

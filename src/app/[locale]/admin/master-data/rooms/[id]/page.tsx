@@ -23,25 +23,27 @@ const CONTRACT_STATUS_LABEL: Record<string, string> = {
 
 export default async function EditRoomPage({ params }: Props) {
   const { id } = await params;
-  const [room, floors, facilities, attachments, history] = await Promise.all([
-    roomService.getById(id),
-    roomService.listFloors(),
+  const room = await roomService.getById(id);
+
+  if (!room) notFound();
+
+  const [floors, facilities, attachments, history] = await Promise.all([
+    roomService.listFloors(room.propertyId),
     facilityService.list(),
     attachmentService.listFor('ROOM', id),
     roomService.getRoomHistory(id),
   ]);
 
-  if (!room) notFound();
-
   return (
     <div className="flex max-w-2xl flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Edit Kamar {room.number}</CardTitle>
+          <CardTitle>Edit Kamar {room.number} — {room.property.name}</CardTitle>
         </CardHeader>
         <CardContent>
           <RoomForm
             action={updateRoomAction.bind(null, id)}
+            propertyId={room.propertyId}
             floors={floors}
             facilities={facilities}
             submitLabel="Simpan Perubahan"
@@ -53,6 +55,11 @@ export default async function EditRoomPage({ params }: Props) {
               description: room.description,
               isActive: room.isActive,
               facilityIds: room.facilities.map((f) => f.facilityId),
+              prices: room.prices.map((p) => ({
+                billingCycle: p.billingCycle,
+                interval: p.interval,
+                price: p.price.toNumber(),
+              })),
             }}
           />
         </CardContent>

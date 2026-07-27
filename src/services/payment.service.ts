@@ -37,14 +37,14 @@ export const paymentService = {
   list() {
     return prisma.payment.findMany({
       orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }, { dueDate: 'asc' }],
-      include: { contract: { include: { tenant: true, room: { include: { floor: true } } } } },
+      include: { contract: { include: { tenant: true, room: { include: { floor: true, property: true } } } } },
     });
   },
 
   getById(id: string) {
     return prisma.payment.findUnique({
       where: { id },
-      include: { contract: { include: { tenant: true, room: { include: { floor: true } } } } },
+      include: { contract: { include: { tenant: true, room: { include: { floor: true, property: true } } } } },
     });
   },
 
@@ -64,14 +64,53 @@ export const paymentService = {
   async generateMonthlyInvoices(periodMonth: number, periodYear: number) {
     const activeContracts = await prisma.contract.findMany({
       where: { status: 'ACTIVE' },
-      select: { id: true, rentPrice: true },
+      select: {
+        id: true,
+        rentPrice: true,
+        startDate: true,
+        endDate: true,
+        billingCycle: true,
+        billingInterval: true,
+      },
     });
     if (activeContracts.length === 0) return { created: 0 };
 
     const dueDate = new Date(periodYear, periodMonth - 1, DUE_DAY_OF_MONTH);
 
+    // Filter contracts that should be billed for this month/year
+    const contractsToBill = activeContracts.filter((contract) => {
+      // Exclude harian/mingguan from monthly billing runs (they are billed upfront)
+      if (contract.billingCycle === 'DAILY' || contract.billingCycle === 'WEEKLY') {
+        return false;
+      }
+
+      // Check if target month is before contract starts
+      const start = contract.startDate;
+      const yDiff = periodYear - start.getFullYear();
+      const mDiff = periodMonth - (start.getMonth() + 1);
+      const monthsDiff = yDiff * 12 + mDiff;
+
+      if (monthsDiff < 0) return false;
+
+      // Check if contract has already expired by the target month
+      if (contract.endDate) {
+        const targetDate = new Date(periodYear, periodMonth - 1, 1);
+        if (targetDate > contract.endDate) return false;
+      }
+
+      // Calculate interval in months
+      const intervalInMonths = contract.billingCycle === 'YEARLY'
+        ? contract.billingInterval * 12
+        : contract.billingInterval;
+
+      // It is due if the months difference is a multiple of the billing interval
+      return monthsDiff % intervalInMonths === 0;
+    });
+
+    if (contractsToBill.length === 0) return { created: 0 };
+
     const result = await prisma.payment.createMany({
-      data: activeContracts.map((contract) => ({
+      data: contractsToBill.map((contract) => ({
         contractId: contract.id,
         periodMonth,
         periodYear,

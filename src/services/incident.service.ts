@@ -7,6 +7,7 @@ import type { IncidentInput, IncidentStatusInput } from '@/lib/validations';
 interface IncidentFilter {
   category?: IncidentCategory;
   status?: IncidentStatus;
+  propertyId?: string;
   roomId?: string;
   floorId?: string;
 }
@@ -16,20 +17,21 @@ export const incidentService = {
     const where: Prisma.IncidentWhereInput = {};
     if (filter.category) where.category = filter.category;
     if (filter.status) where.status = filter.status;
+    if (filter.propertyId) where.propertyId = filter.propertyId;
     if (filter.roomId) where.roomId = filter.roomId;
     if (filter.floorId) where.room = { floorId: filter.floorId };
 
     return prisma.incident.findMany({
       where,
       orderBy: { date: 'desc' },
-      include: { room: { include: { floor: true } } },
+      include: { room: { include: { floor: true } }, property: true },
     });
   },
 
   getById(id: string) {
     return prisma.incident.findUnique({
       where: { id },
-      include: { room: { include: { floor: true } } },
+      include: { room: { include: { floor: true } }, property: true },
     });
   },
 
