@@ -3,7 +3,6 @@
 // state" principle as getPaymentStatus().
 
 import { prisma } from '@/lib/prisma';
-
 import { getPaymentStatus } from './payment.service';
 
 function monthRange(date = new Date()) {
@@ -13,18 +12,28 @@ function monthRange(date = new Date()) {
 }
 
 export const dashboardService = {
-  async getRoomStats() {
+  async getRoomStats(propertyId?: string) {
     const [total, occupied] = await Promise.all([
-      prisma.room.count({ where: { isActive: true } }),
-      prisma.room.count({ where: { isActive: true, contracts: { some: { status: 'ACTIVE' } } } }),
+      prisma.room.count({ where: { isActive: true, propertyId: propertyId || undefined } }),
+      prisma.room.count({
+        where: {
+          isActive: true,
+          propertyId: propertyId || undefined,
+          contracts: { some: { status: 'ACTIVE' } },
+        },
+      }),
     ]);
     return { total, occupied, available: total - occupied };
   },
 
-  async getRevenueThisMonth(): Promise<number> {
+  async getRevenueThisMonth(propertyId?: string): Promise<number> {
     const now = new Date();
     const agg = await prisma.payment.aggregate({
-      where: { periodMonth: now.getMonth() + 1, periodYear: now.getFullYear() },
+      where: {
+        periodMonth: now.getMonth() + 1,
+        periodYear: now.getFullYear(),
+        contract: propertyId ? { room: { propertyId } } : undefined,
+      },
       _sum: { amountPaid: true },
     });
     return agg._sum.amountPaid?.toNumber() ?? 0;
@@ -32,28 +41,45 @@ export const dashboardService = {
 
   // Payment status is derived, not stored, so overdue count needs a JS filter
   // over candidates rather than a single WHERE clause — see getPaymentStatus().
-  async getOverdueCount(): Promise<number> {
+  async getOverdueCount(propertyId?: string): Promise<number> {
     const today = new Date();
     const candidates = await prisma.payment.findMany({
-      where: { dueDate: { lt: today } },
+      where: {
+        dueDate: { lt: today },
+        contract: propertyId ? { room: { propertyId } } : undefined,
+      },
       select: { amountDue: true, amountPaid: true, dueDate: true },
     });
     return candidates.filter((p) => getPaymentStatus(p, today) === 'OVERDUE').length;
   },
 
-  async getMaintenanceThisMonth() {
+  async getMaintenanceThisMonth(propertyId?: string) {
     const { start, end } = monthRange();
     const [count, costAgg] = await Promise.all([
-      prisma.maintenanceRecord.count({ where: { date: { gte: start, lt: end } } }),
-      prisma.maintenanceRecord.aggregate({ where: { date: { gte: start, lt: end } }, _sum: { cost: true } }),
+      prisma.maintenanceRecord.count({
+        where: {
+          date: { gte: start, lt: end },
+          propertyId: propertyId || undefined,
+        },
+      }),
+      prisma.maintenanceRecord.aggregate({
+        where: {
+          date: { gte: start, lt: end },
+          propertyId: propertyId || undefined,
+        },
+        _sum: { cost: true },
+      }),
     ]);
     return { count, totalCost: costAgg._sum.cost?.toNumber() ?? 0 };
   },
 
-  async getIncidentsThisMonth() {
+  async getIncidentsThisMonth(propertyId?: string) {
     const { start, end } = monthRange();
     const incidents = await prisma.incident.findMany({
-      where: { date: { gte: start, lt: end } },
+      where: {
+        date: { gte: start, lt: end },
+        propertyId: propertyId || undefined,
+      },
       select: { status: true },
     });
     return {
@@ -66,7 +92,7 @@ export const dashboardService = {
 
   // Last `count` periods (by periodMonth/periodYear), oldest first — feeds the
   // dashboard revenue trend chart.
-  async getRevenueTrend(count = 6) {
+  async getRevenueTrend(count = 6, propertyId?: string) {
     const now = new Date();
     const periods = Array.from({ length: count }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1);
@@ -76,7 +102,11 @@ export const dashboardService = {
     return Promise.all(
       periods.map(async (period) => {
         const agg = await prisma.payment.aggregate({
-          where: { periodMonth: period.month, periodYear: period.year },
+          where: {
+            periodMonth: period.month,
+            periodYear: period.year,
+            contract: propertyId ? { room: { propertyId } } : undefined,
+          },
           _sum: { amountPaid: true },
         });
         return { ...period, total: agg._sum.amountPaid?.toNumber() ?? 0 };

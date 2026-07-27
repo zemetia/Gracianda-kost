@@ -49,7 +49,7 @@ export default async function IncidentDetailPage({ params }: Props) {
           </Typography>
           <Typography variant="muted">
             {incident.date.toLocaleDateString('id-ID')} ·{' '}
-            {incident.room ? `Kamar ${incident.room.number} (${incident.room.floor.name})` : incident.location ?? 'Tanpa lokasi'}
+            {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
           </Typography>
         </div>
         <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>

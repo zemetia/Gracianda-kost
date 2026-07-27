@@ -7,17 +7,34 @@ import { Input } from '@/components/ui/Input';
 
 import { createMaintenanceAction, type MaintenanceFormState } from './actions';
 
+interface Property {
+  id: string;
+  name: string;
+}
+
 interface Room {
   id: string;
   number: string;
-  floor: { name: string };
+  propertyId: string;
+  floor: { name: string } | null;
 }
 
 const initialState: MaintenanceFormState = {};
 
-export function MaintenanceForm({ rooms, categories }: { rooms: Room[]; categories: string[] }) {
+export function MaintenanceForm({
+  properties,
+  rooms,
+  categories,
+}: {
+  properties: Property[];
+  rooms: Room[];
+  categories: string[];
+}) {
   const [state, formAction, isPending] = useActionState(createMaintenanceAction, initialState);
   const [scope, setScope] = useState<'ROOM' | 'BUILDING'>('ROOM');
+  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+
+  const filteredRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -30,7 +47,7 @@ export function MaintenanceForm({ rooms, categories }: { rooms: Room[]; categori
             checked={scope === 'ROOM'}
             onChange={() => setScope('ROOM')}
           />
-          Per Kamar
+          Per Kamar / Unit
         </label>
         <label className="flex items-center gap-2">
           <input
@@ -40,14 +57,39 @@ export function MaintenanceForm({ rooms, categories }: { rooms: Room[]; categori
             checked={scope === 'BUILDING'}
             onChange={() => setScope('BUILDING')}
           />
-          Seluruh Gedung
+          Seluruh Properti / Gedung
         </label>
       </fieldset>
 
-      {scope === 'ROOM' && (
-        <div className="flex flex-col gap-1.5">
+      {/* Property Selector */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="propertyId" className="text-sm font-medium text-foreground">
+          Properti <span className="text-destructive">*</span>
+        </label>
+        <select
+          id="propertyId"
+          name="propertyId"
+          required
+          value={selectedPropertyId}
+          onChange={(e) => setSelectedPropertyId(e.target.value)}
+          className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="">Pilih properti</option>
+          {properties.map((prop) => (
+            <option key={prop.id} value={prop.id}>
+              {prop.name}
+            </option>
+          ))}
+        </select>
+        {state.fieldErrors?.propertyId && (
+          <p className="text-xs text-destructive">{state.fieldErrors.propertyId[0]}</p>
+        )}
+      </div>
+
+      {scope === 'ROOM' && selectedPropertyId && (
+        <div className="flex flex-col gap-1.5 animate-in fade-in duration-200">
           <label htmlFor="roomId" className="text-sm font-medium text-foreground">
-            Kamar <span className="text-destructive">*</span>
+            Kamar / Unit <span className="text-destructive">*</span>
           </label>
           <select
             id="roomId"
@@ -55,10 +97,10 @@ export function MaintenanceForm({ rooms, categories }: { rooms: Room[]; categori
             required={scope === 'ROOM'}
             className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Pilih kamar</option>
-            {rooms.map((room) => (
+            <option value="">Pilih kamar/unit</option>
+            {filteredRooms.map((room) => (
               <option key={room.id} value={room.id}>
-                {room.number} ({room.floor.name})
+                No. {room.number} {room.floor ? `(${room.floor.name})` : ''}
               </option>
             ))}
           </select>
@@ -66,6 +108,10 @@ export function MaintenanceForm({ rooms, categories }: { rooms: Room[]; categori
             <p className="text-xs text-destructive">{state.fieldErrors.roomId[0]}</p>
           )}
         </div>
+      )}
+
+      {scope === 'ROOM' && !selectedPropertyId && (
+        <p className="text-sm text-foreground-subtle italic">Pilih properti terlebih dahulu untuk memuat daftar kamar.</p>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

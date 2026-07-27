@@ -1,16 +1,22 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 import { createIncidentAction, type IncidentFormState } from './actions';
 
+interface Property {
+  id: string;
+  name: string;
+}
+
 interface Room {
   id: string;
   number: string;
-  floor: { name: string };
+  propertyId: string;
+  floor: { name: string } | null;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -24,8 +30,11 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const initialState: IncidentFormState = {};
 
-export function IncidentForm({ rooms }: { rooms: Room[] }) {
+export function IncidentForm({ properties, rooms }: { properties: Property[]; rooms: Room[] }) {
   const [state, formAction, isPending] = useActionState(createIncidentAction, initialState);
+  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+
+  const filteredRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -54,26 +63,63 @@ export function IncidentForm({ rooms }: { rooms: Room[] }) {
 
         <Input label="Tanggal" name="date" type="date" required error={state.fieldErrors?.date?.[0]} />
 
+        {/* Property Selector */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="roomId" className="text-sm font-medium text-foreground">
-            Kamar (opsional)
+          <label htmlFor="propertyId" className="text-sm font-medium text-foreground">
+            Properti <span className="text-destructive">*</span>
           </label>
           <select
-            id="roomId"
-            name="roomId"
+            id="propertyId"
+            name="propertyId"
+            required
+            value={selectedPropertyId}
+            onChange={(e) => setSelectedPropertyId(e.target.value)}
             className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Tidak terkait kamar</option>
-            {rooms.map((room) => (
-              <option key={room.id} value={room.id}>
-                {room.number} ({room.floor.name})
+            <option value="">Pilih properti</option>
+            {properties.map((prop) => (
+              <option key={prop.id} value={prop.id}>
+                {prop.name}
               </option>
             ))}
           </select>
+          {state.fieldErrors?.propertyId && (
+            <p className="text-xs text-destructive">{state.fieldErrors.propertyId[0]}</p>
+          )}
         </div>
 
+        {selectedPropertyId ? (
+          <div className="flex flex-col gap-1.5 animate-in fade-in duration-200">
+            <label htmlFor="roomId" className="text-sm font-medium text-foreground">
+              Kamar / Unit (opsional)
+            </label>
+            <select
+              id="roomId"
+              name="roomId"
+              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Tidak terkait kamar/unit</option>
+              {filteredRooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  No. {room.number} {room.floor ? `(${room.floor.name})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-foreground">Kamar / Unit (opsional)</label>
+            <select
+              disabled
+              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground-subtle/50 opacity-60 cursor-not-allowed"
+            >
+              <option value="">Pilih properti terlebih dahulu</option>
+            </select>
+          </div>
+        )}
+
         <Input
-          label="Lokasi (jika bukan kamar)"
+          label="Lokasi (jika bukan kamar, mis: Parkiran, Lobi)"
           name="location"
           placeholder="Parkiran, Lobi, dst"
           error={state.fieldErrors?.location?.[0]}

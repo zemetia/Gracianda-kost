@@ -108,10 +108,13 @@ export default async function MaintenancePage({ searchParams }: Props) {
               <tr key={record.id}>
                 <td className="px-4 py-3 text-foreground-muted">{record.date.toLocaleDateString('id-ID')}</td>
                 <td className="px-4 py-3">
-                  <Badge variant="outline">
-                    {SCOPE_LABEL[record.scope]}
-                    {record.room ? ` — ${record.room.number} (${record.room.floor.name})` : ''}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge variant="outline" className="w-fit">
+                      {SCOPE_LABEL[record.scope]}
+                      {record.room ? ` — No. ${record.room.number} ${record.room.floor ? `(${record.room.floor.name})` : ''}` : ''}
+                    </Badge>
+                    <span className="text-[10px] text-foreground-muted">{record.property.name}</span>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-foreground-muted">{record.category}</td>
                 <td className="px-4 py-3 text-foreground-muted">

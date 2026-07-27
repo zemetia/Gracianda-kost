@@ -52,7 +52,7 @@ export default async function ContractsPage() {
                 </td>
                 <td className="px-4 py-3 text-foreground-muted">{contract.tenant.fullName}</td>
                 <td className="px-4 py-3 text-foreground-muted">
-                  {contract.room.number} ({contract.room.floor.name})
+                  {contract.room.property.name} — No. {contract.room.number} {contract.room.floor ? `(${contract.room.floor.name})` : ''}
                 </td>
                 <td className="px-4 py-3 text-foreground-muted">
                   {contract.startDate.toLocaleDateString('id-ID')}

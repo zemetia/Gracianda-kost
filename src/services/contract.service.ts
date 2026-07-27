@@ -8,37 +8,43 @@ import type { CloseContractInput, NewContractInput } from '@/lib/validations';
 
 type Tx = Prisma.TransactionClient;
 
-// Atomic per-year sequence via UPSERT ... RETURNING — race-safe under
-// concurrent contract creation without needing a native Postgres sequence
-// object per calendar year.
-async function generateContractCode(tx: Tx): Promise<string> {
+// Atomic per-year sequence per-property via UPSERT ... RETURNING — race-safe under
+// concurrent contract creation without needing a native Postgres sequence.
+async function generateContractCode(tx: Tx, propertyId: string): Promise<string> {
+  const property = await tx.property.findUnique({
+    where: { id: propertyId },
+    select: { code: true },
+  });
+  const prefix = property?.code || 'RENT';
+
   const year = new Date().getFullYear();
   const yy = String(year).slice(-2);
 
   const rows = await tx.$queryRaw<{ lastValue: number }[]>`
-    INSERT INTO "contract_sequences" ("year", "lastValue")
-    VALUES (${year}, 1)
-    ON CONFLICT ("year")
+    INSERT INTO "contract_sequences" ("propertyId", "year", "lastValue")
+    VALUES (${propertyId}, ${year}, 1)
+    ON CONFLICT ("propertyId", "year")
     DO UPDATE SET "lastValue" = "contract_sequences"."lastValue" + 1
     RETURNING "lastValue"
   `;
 
   const seq = rows[0]?.lastValue ?? 1;
-  return `GH-${yy}${String(seq).padStart(4, '0')}`;
+  return `${prefix}-${yy}${String(seq).padStart(4, '0')}`;
 }
 
 export const contractService = {
-  list() {
+  list(propertyId?: string) {
     return prisma.contract.findMany({
+      where: propertyId ? { room: { propertyId } } : undefined,
       orderBy: { createdAt: 'desc' },
-      include: { tenant: true, room: { include: { floor: true } } },
+      include: { tenant: true, room: { include: { floor: true, property: true } } },
     });
   },
 
   getById(id: string) {
     return prisma.contract.findUnique({
       where: { id },
-      include: { tenant: true, room: { include: { floor: true } }, occupants: true },
+      include: { tenant: true, room: { include: { floor: true, property: true } }, occupants: true },
     });
   },
 
@@ -82,15 +88,17 @@ export const contractService = {
         });
       }
 
-      const contractCode = await generateContractCode(tx);
+      const contractCode = await generateContractCode(tx, room.propertyId);
 
-      return tx.contract.create({
+      const contract = await tx.contract.create({
         data: {
           contractCode,
           tenantId,
           roomId: input.roomId,
           rentPrice: input.rentPrice,
           deposit: input.deposit,
+          billingCycle: input.billingCycle,
+          billingInterval: input.billingInterval,
           startDate: input.startDate,
           endDate: input.endDate,
           notes: input.notes,
@@ -98,6 +106,39 @@ export const contractService = {
         },
         include: { tenant: true, room: true },
       });
+
+      // Calculate initial invoice amount
+      let amountDue = input.rentPrice;
+      let duration = 1;
+      if (input.billingCycle === 'DAILY') {
+        if (input.endDate) {
+          const diffTime = Math.abs(input.endDate.getTime() - input.startDate.getTime());
+          duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (duration < 1) duration = 1;
+        }
+        amountDue = input.rentPrice * duration;
+      } else if (input.billingCycle === 'WEEKLY') {
+        if (input.endDate) {
+          const diffTime = Math.abs(input.endDate.getTime() - input.startDate.getTime());
+          const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          duration = Math.ceil(totalDays / 7);
+          if (duration < 1) duration = 1;
+        }
+        amountDue = input.rentPrice * duration;
+      }
+
+      // Generate the initial payment record (upfront)
+      await tx.payment.create({
+        data: {
+          contractId: contract.id,
+          periodMonth: input.startDate.getMonth() + 1,
+          periodYear: input.startDate.getFullYear(),
+          amountDue,
+          dueDate: input.startDate,
+        },
+      });
+
+      return contract;
     });
   },
 

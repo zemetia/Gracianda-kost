@@ -19,9 +19,9 @@ export default async function AdminLayout({ children, params }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col md:flex-row bg-background">
       <AdminSidebar role={session.user.role} userName={session.user.name ?? session.user.email ?? ''} />
-      <main className="flex-1 p-6 lg:p-8">{children}</main>
+      <main className="flex-1 p-6 lg:p-8 pt-20 md:pt-8 print:p-0">{children}</main>
     </div>
   );
 }

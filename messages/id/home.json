@@ -11,21 +11,43 @@
     "ctaSecondary": "Hubungi Admin"
   },
   "facilities": {
-    "heading": "Fasilitas Umum",
-    "subheading": "Fasilitas bersama yang bisa dipakai semua penghuni"
+    "heading": "Fasilitas Bersama",
+    "subheading": "Fasilitas premium yang dirancang untuk mendukung kenyamanan dan produktivitas Anda sehari-hari."
   },
   "promo": {
     "heading": "Promo Berjalan"
   },
   "rooms": {
-    "heading": "Denah Kamar",
-    "subheading": "Klik kamar untuk lihat detail — hijau tersedia, merah terisi"
+    "heading": "Denah Kamar Interaktif",
+    "subheading": "Pilih lantai dan klik nomor kamar untuk melihat detail foto, harga, fasilitas, dan status ketersediaan."
+  },
+  "gallery": {
+    "heading": "Galeri Hunian",
+    "subheading": "Intip kenyamanan sudut-sudut Gracianda House yang bersih, rapi, dan terawat."
+  },
+  "nearby": {
+    "heading": "Lokasi & Aksesibilitas",
+    "subheading": "Berada di lokasi strategis yang memudahkan mobilitas harian Anda.",
+    "landmarks": {
+      "campus": "Kampus & Pendidikan",
+      "transit": "Transportasi Publik",
+      "mall": "Pusat Perbelanjaan",
+      "hospital": "Fasilitas Kesehatan"
+    }
+  },
+  "testimonials": {
+    "heading": "Ulasan Penghuni",
+    "subheading": "Dengarkan langsung cerita mereka yang telah merasakan kenyamanan tinggal di Gracianda House."
+  },
+  "faq": {
+    "heading": "Pertanyaan Umum (FAQ)",
+    "subheading": "Punya pertanyaan seputar Gracianda House? Temukan jawabannya di sini."
   },
   "location": {
-    "heading": "Lokasi"
+    "heading": "Lokasi Kami"
   },
   "contact": {
-    "heading": "Hubungi Kami",
-    "cta": "Chat via WhatsApp"
+    "heading": "Punya Pertanyaan Lebih Lanjut?",
+    "cta": "Hubungi Kami via WhatsApp"
   }
 }

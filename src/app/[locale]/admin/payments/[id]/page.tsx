@@ -47,8 +47,7 @@ export default async function PaymentDetailPage({ params }: Props) {
             <Link href={`/admin/contracts/${payment.contractId}`} className="hover:underline">
               {payment.contract.contractCode}
             </Link>{' '}
-            · {payment.contract.tenant.fullName} · Kamar {payment.contract.room.number} (
-            {payment.contract.room.floor.name})
+            · {payment.contract.tenant.fullName} · {payment.contract.room.property.name} · Unit {payment.contract.room.number} {payment.contract.room.floor ? `(${payment.contract.room.floor.name})` : ''}
           </Typography>
         </div>
         <PaymentStatusBadge status={status} />

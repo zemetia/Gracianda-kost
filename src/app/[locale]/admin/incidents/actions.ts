@@ -24,6 +24,7 @@ export async function createIncidentAction(
     category: formData.get('category'),
     status: 'OPEN',
     date: formData.get('date'),
+    propertyId: formData.get('propertyId'),
     roomId: formData.get('roomId') || undefined,
     location: formData.get('location') || undefined,
     description: formData.get('description'),

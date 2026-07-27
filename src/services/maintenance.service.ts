@@ -6,6 +6,7 @@ import type { MaintenanceInput } from '@/lib/validations';
 
 interface MaintenanceFilter {
   scope?: MaintenanceScope;
+  propertyId?: string;
   roomId?: string;
   floorId?: string;
   from?: Date;
@@ -16,6 +17,7 @@ export const maintenanceService = {
   list(filter: MaintenanceFilter = {}) {
     const where: Prisma.MaintenanceRecordWhereInput = {};
     if (filter.scope) where.scope = filter.scope;
+    if (filter.propertyId) where.propertyId = filter.propertyId;
     if (filter.roomId) where.roomId = filter.roomId;
     if (filter.floorId) where.room = { floorId: filter.floorId };
     if (filter.from || filter.to) {
@@ -28,20 +30,23 @@ export const maintenanceService = {
     return prisma.maintenanceRecord.findMany({
       where,
       orderBy: { date: 'desc' },
-      include: { room: { include: { floor: true } } },
+      include: { room: { include: { floor: true } }, property: true },
     });
   },
 
   getById(id: string) {
     return prisma.maintenanceRecord.findUnique({
       where: { id },
-      include: { room: { include: { floor: true } } },
+      include: { room: { include: { floor: true } }, property: true },
     });
   },
 
   create(data: MaintenanceInput) {
     return prisma.maintenanceRecord.create({
-      data: { ...data, roomId: data.scope === 'ROOM' ? data.roomId : null },
+      data: {
+        ...data,
+        roomId: data.scope === 'ROOM' ? data.roomId : null,
+      },
     });
   },
 

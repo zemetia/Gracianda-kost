@@ -8,7 +8,7 @@ type SonnerProps = ComponentProps<typeof SonnerToaster>;
 export function Toaster(props: SonnerProps) {
   return (
     <SonnerToaster
-      theme="dark"
+      theme="light"
       richColors
       position="bottom-right"
       toastOptions={{

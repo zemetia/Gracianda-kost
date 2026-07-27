@@ -24,6 +24,8 @@ export const newContractSchema = z.object({
   roomId: z.string().min(1, 'Kamar wajib dipilih'),
   rentPrice: z.coerce.number().positive('Harga sewa harus lebih dari 0'),
   deposit: z.coerce.number().min(0).optional(),
+  billingCycle: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).default('MONTHLY'),
+  billingInterval: z.coerce.number().int().min(1).default(1),
   startDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),
   notes: z.string().max(2000).optional(),
