@@ -27,32 +27,39 @@ export function Header({ className }: HeaderProps) {
             className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-black"
             aria-hidden="true"
           >
-            N
+            G
           </span>
-          <span>NextTemplate</span>
+          <span>Gracianda House</span>
         </Link>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-6 md:flex">
-          <Link
-            href="/"
+          <a
+            href="#kamar"
             className="text-sm text-foreground-muted transition-colors hover:text-foreground"
           >
-            {t('home')}
-          </Link>
-          <Link
-            href="/about"
+            {t('rooms')}
+          </a>
+          <a
+            href="#lokasi"
             className="text-sm text-foreground-muted transition-colors hover:text-foreground"
           >
-            {t('about')}
-          </Link>
+            {t('location')}
+          </a>
+          <a
+            href="#kontak"
+            className="text-sm text-foreground-muted transition-colors hover:text-foreground"
+          >
+            {t('contact')}
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
-          <Button size="sm" variant="ghost">
-            {t('signIn')}
-          </Button>
-          <Button size="sm">{t('getStarted')}</Button>
+          <Link href="/sign-in">
+            <Button size="sm" variant="ghost">
+              {t('signIn')}
+            </Button>
+          </Link>
         </div>
       </div>
     </header>

@@ -11,8 +11,18 @@ export async function requireAuth(): Promise<Session> {
   return session;
 }
 
-export async function requireRole(role: string): Promise<Session> {
+export async function requireRole(role: string | string[]): Promise<Session> {
   const session = await requireAuth();
-  if (session.user.role !== role) throw new Error('Forbidden');
+  const allowed = Array.isArray(role) ? role : [role];
+  if (!allowed.includes(session.user.role)) throw new Error('Forbidden');
   return session;
+}
+
+// Non-throwing variant for pages/layouts: lets the caller render a 403 screen
+// instead of crashing into the error boundary. Server Actions keep requireRole().
+export async function canAccess(role: string | string[]): Promise<boolean> {
+  const session = await getSession();
+  if (!session?.user?.id) return false;
+  const allowed = Array.isArray(role) ? role : [role];
+  return allowed.includes(session.user.role);
 }

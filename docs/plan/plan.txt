@@ -1,0 +1,927 @@
+Saya setuju. Dari sudut pandang software engineering, narasi tersebut masih menggambarkan apa yang dilakukan admin secara manual, bukan bagaimana sistem seharusnya membantu pekerjaan admin. Beberapa fitur juga dapat disederhanakan agar lebih mudah digunakan dan dikembangkan.
+
+
+
+Berikut adalah versi yang saya rekomendasikan.
+
+
+
+
+
+---
+
+
+
+Gracianda House Management System
+
+
+
+Tujuan Sistem
+
+
+
+Membangun sistem manajemen rumah kost yang dapat membantu pengelolaan kamar, penyewa, pembayaran, maintenance, keamanan, serta pelaporan secara terintegrasi dalam satu platform.
+
+
+
+
+
+---
+
+
+
+1. Website Publik
+
+
+
+Website berfungsi sebagai media promosi dan informasi.
+
+
+
+Halaman Beranda
+
+
+
+Menampilkan:
+
+
+
+Profil Gracianda House
+
+
+
+Fasilitas umum
+
+
+
+Lokasi (Google Maps)
+
+
+
+Kontak
+
+
+
+Promo yang sedang berjalan (banner/running text)
+
+
+
+Tombol Hubungi Admin
+
+
+
+
+
+
+
+---
+
+
+
+Denah Kamar Interaktif
+
+
+
+Website menampilkan denah setiap lantai.
+
+
+
+Setiap kamar memiliki warna berbeda berdasarkan status:
+
+
+
+🟢 Tersedia
+
+
+
+🔴 Terisi
+
+
+
+Ketika pengguna memilih sebuah kamar akan muncul:
+
+
+
+Foto kamar
+
+
+
+Video kamar (opsional)
+
+
+
+Harga
+
+
+
+Fasilitas
+
+
+
+Ukuran kamar
+
+
+
+Status kamar
+
+
+
+Tombol Hubungi Admin
+
+
+
+
+
+> Saya lebih menyarankan klik daripada hover, karena pengguna HP tidak memiliki kursor.
+
+
+
+
+
+
+
+
+
+---
+
+
+
+2. Master Data
+
+
+
+Admin dapat mengelola:
+
+
+
+Data kamar
+
+
+
+Harga kamar
+
+
+
+Fasilitas
+
+
+
+Foto
+
+
+
+Video
+
+
+
+Promo
+
+
+
+
+
+Semua dapat diubah tanpa bantuan programmer.
+
+
+
+
+
+---
+
+
+
+3. Data Penyewa
+
+
+
+Ketika kamar disewa, admin mengisi data penyewa.
+
+
+
+Nomor Penyewa
+
+
+
+Daripada memakai NIS (karena identik dengan sekolah), saya menyarankan menggunakan:
+
+
+
+Tenant ID
+
+
+
+Rental ID
+
+
+
+Customer ID
+
+
+
+Kode Penyewa
+
+
+
+ID Sewa
+
+
+
+
+
+Contoh:
+
+
+
+GH-250001
+
+
+
+GH-250002
+
+
+
+GH-250003
+
+
+
+Lebih mudah dibaca dibanding angka panjang.
+
+
+
+ID ini otomatis dibuat ketika kontrak baru dibuat.
+
+
+
+Jika penyewa pindah kamar maka dibuat kontrak baru sehingga mendapatkan ID baru.
+
+
+
+
+
+---
+
+
+
+Data yang Disimpan
+
+
+
+ID Sewa
+
+
+
+Nomor KTP
+
+
+
+Scan KTP
+
+
+
+Nama Penyewa
+
+
+
+Nama Penghuni Tambahan (jika ada)
+
+
+
+Nomor HP
+
+
+
+Email
+
+
+
+Pekerjaan
+
+
+
+Kendaraan
+
+
+
+Plat Nomor
+
+
+
+Tanggal Masuk
+
+
+
+Tanggal Keluar (jika sudah selesai)
+
+
+
+Harga Sewa
+
+
+
+Deposit (jika ada)
+
+
+
+Catatan
+
+
+
+
+
+
+
+---
+
+
+
+4. Pembayaran
+
+
+
+Ini menurut saya bagian yang perlu dibuat jauh lebih otomatis.
+
+
+
+Sistem akan:
+
+
+
+Menentukan tanggal jatuh tempo
+
+
+
+Menampilkan status pembayaran
+
+
+
+
+
+Status:
+
+
+
+Belum Jatuh Tempo
+
+
+
+Menunggu Pembayaran
+
+
+
+Lunas
+
+
+
+Terlambat
+
+
+
+
+
+Admin tinggal menekan tombol:
+
+
+
+✓ Sudah Dibayar
+
+
+
+atau
+
+
+
+Tambah Pembayaran
+
+
+
+Sistem otomatis menghitung:
+
+
+
+Total pembayaran
+
+
+
+Tunggakan
+
+
+
+Lama keterlambatan
+
+
+
+
+
+
+
+---
+
+
+
+Reminder
+
+
+
+Sistem dapat membuat template pesan WhatsApp.
+
+
+
+Contoh:
+
+
+
+> Halo Bapak/Ibu ..., pembayaran kamar Gracianda House untuk bulan Juli akan jatuh tempo pada tanggal 5 Juli.
+
+
+
+
+
+
+
+Admin cukup klik tombol
+
+
+
+"Kirim WA"
+
+
+
+WhatsApp akan terbuka otomatis.
+
+
+
+
+
+---
+
+
+
+5. Riwayat Kamar
+
+
+
+Ini fitur yang menurut saya sangat penting tetapi belum ada.
+
+
+
+Setiap kamar memiliki histori.
+
+
+
+Misalnya Kamar 203.
+
+
+
+Akan terlihat:
+
+
+
+Pernah dihuni siapa saja
+
+
+
+Berapa lama
+
+
+
+Berapa kali maintenance
+
+
+
+Total pemasukan kamar
+
+
+
+Total biaya kamar
+
+
+
+
+
+Dengan begitu kita tahu kamar mana yang paling menguntungkan.
+
+
+
+
+
+---
+
+
+
+6. Maintenance
+
+
+
+Pisahkan menjadi dua kategori.
+
+
+
+Maintenance Kamar
+
+
+
+Misalnya:
+
+
+
+AC
+
+
+
+Keran
+
+
+
+Lampu
+
+
+
+Kasur
+
+
+
+
+
+Data:
+
+
+
+Tanggal
+
+
+
+Jenis
+
+
+
+Biaya
+
+
+
+Vendor
+
+
+
+Foto
+
+
+
+Catatan
+
+
+
+
+
+
+
+---
+
+
+
+Maintenance Gedung
+
+
+
+Misalnya:
+
+
+
+Pompa
+
+
+
+Pagar
+
+
+
+Cat
+
+
+
+Atap
+
+
+
+Tabung Gas
+
+
+
+CCTV
+
+
+
+
+
+Data sama seperti maintenance kamar.
+
+
+
+
+
+---
+
+
+
+7. Kejadian
+
+
+
+Saya menyarankan istilah Insiden daripada "Kejadian".
+
+
+
+Kategori:
+
+
+
+Gangguan
+
+
+
+Pelanggaran aturan
+
+
+
+Kerusakan
+
+
+
+Kehilangan
+
+
+
+Keluhan penghuni
+
+
+
+Laporan Security
+
+
+
+
+
+Data:
+
+
+
+Tanggal
+
+
+
+Lokasi
+
+
+
+Kamar
+
+
+
+Deskripsi
+
+
+
+Foto
+
+
+
+Status
+
+
+
+
+
+
+
+---
+
+
+
+8. Dashboard
+
+
+
+Begitu admin login langsung melihat:
+
+
+
+Total kamar
+
+
+
+Kamar kosong
+
+
+
+Kamar terisi
+
+
+
+Pendapatan bulan ini
+
+
+
+Pembayaran yang terlambat
+
+
+
+Maintenance bulan ini
+
+
+
+Insiden bulan ini
+
+
+
+
+
+Semua dalam bentuk grafik.
+
+
+
+
+
+---
+
+
+
+9. Laporan
+
+
+
+Laporan dapat difilter:
+
+
+
+Harian
+
+
+
+Mingguan
+
+
+
+Bulanan
+
+
+
+Tahunan
+
+
+
+Custom
+
+
+
+
+
+Laporan:
+
+
+
+Keuangan
+
+
+
+Pendapatan
+
+
+
+Pengeluaran
+
+
+
+Profit
+
+
+
+
+
+Per:
+
+
+
+Kamar
+
+
+
+Lantai
+
+
+
+Seluruh gedung
+
+
+
+
+
+
+
+---
+
+
+
+Penyewa
+
+
+
+Penyewa aktif
+
+
+
+Penyewa keluar
+
+
+
+Penyewa baru
+
+
+
+Penyewa terlambat bayar
+
+
+
+Daftar blacklist
+
+
+
+
+
+
+
+---
+
+
+
+Maintenance
+
+
+
+Per kamar
+
+
+
+Per lantai
+
+
+
+Seluruh gedung
+
+
+
+
+
+
+
+---
+
+
+
+Insiden
+
+
+
+Per kamar
+
+
+
+Per lantai
+
+
+
+Seluruh gedung
+
+
+
+
+
+
+
+---
+
+10. Rekomendasi Fitur Tambahan
+
+Menurut saya, ada beberapa fitur yang akan sangat meningkatkan nilai sistem:
+
+Kalender Okupansi untuk melihat kamar kosong dan masa sewa secara visual.
+
+Riwayat Penyewa sehingga semua histori penyewa terdokumentasi.
+
+Upload Dokumen (KTP, kontrak, bukti pembayaran, foto kondisi kamar).
+
+Pengingat Masa Sewa Berakhir agar admin dapat menawarkan perpanjangan sebelum kontrak habis.
+
+Dashboard Analitik yang menampilkan tingkat okupansi, pendapatan bulanan, biaya maintenance, dan laba secara real-time.
+
+Audit Log, sehingga setiap perubahan data oleh admin tercatat.
+
+Role & Permission, misalnya Super Admin, Admin Operasional, Keuangan, dan Security memiliki akses yang berbeda.
+
+Catatan Penting
+
+Saya juga menyarankan untuk memisahkan konsep Penyewa dan Kontrak Sewa.
+
+Penyewa adalah orangnya (data pribadi tetap sama).
+
+Kontrak Sewa adalah transaksi sewanya (kamar, harga, tanggal masuk, tanggal keluar, pembayaran).
+
+Dengan pendekatan ini, jika seseorang pernah tinggal, keluar, lalu kembali menyewa atau pindah kamar, sistem tidak perlu membuat data penyewa baru. Cukup membuat kontrak sewa baru dengan ID Sewa yang baru. Ini adalah pendekatan yang umum digunakan pada sistem properti, hotel, apartemen, dan manajemen kost karena lebih rapi, fleksibel, dan mudah untuk pelaporan jangka panjang.

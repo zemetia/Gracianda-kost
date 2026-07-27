@@ -6,20 +6,13 @@
 
 import type { MetadataRoute } from 'next';
 
-export type SitemapChangeFreq = NonNullable<
-  MetadataRoute.Sitemap[number]['changeFrequency']
->;
+export type SitemapChangeFreq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
 
 export interface PageConfig {
-  /** URL path relative to root, e.g. '/about' */
   path: string;
-  /** <title> for this page */
   title: string;
-  /** Meta description — be specific: include what the visitor gains */
   description: string;
-  /** Sitemap change frequency hint */
   changeFreq: SitemapChangeFreq;
-  /** Sitemap priority 0.0–1.0 */
   priority: number;
 }
 
@@ -38,10 +31,15 @@ export interface SiteConfig {
     solution: string;
     keyBenefits: string[];
     contactEmail: string;
+    contactPhone: string;
+    whatsappNumber: string;
+    address: string;
+    mapEmbedUrl: string;
     socialLinks: {
       twitter?: string;
       github?: string;
       linkedin?: string;
+      instagram?: string;
     };
   };
   seo: {
@@ -50,72 +48,62 @@ export interface SiteConfig {
     twitterHandle?: string;
     locale: string;
   };
-  /** Registry of all public pages — drives sitemap + LLMs.txt page index */
   pages: Record<string, PageConfig>;
 }
 
 export const siteConfig: SiteConfig = {
   // ─── Core Identity ───────────────────────────────────────────────────────────
-  name: 'My Product',
-  tagline: 'One sentence that nails the value proposition.',
+  name: 'Gracianda House',
+  tagline: 'Kost nyaman, aman, dan terkelola rapi di tengah kota.',
   description:
-    'Two-sentence pitch: what the product does, who it is for, and what makes it different from alternatives.',
-  url: process.env['NEXT_PUBLIC_APP_URL'] ?? 'https://example.com',
+    'Gracianda House adalah rumah kost dengan kamar terawat, fasilitas lengkap, dan sistem sewa yang transparan — cek ketersediaan kamar dan harga langsung dari denah interaktif.',
+  url: process.env['NEXT_PUBLIC_APP_URL'] ?? 'https://graciandahouse.com',
 
   // ─── Brand Assets ────────────────────────────────────────────────────────────
   ogImage: '/og.png',
 
   // ─── Company Details (drives Organization schema + LLMs.txt) ─────────────────
   company: {
-    legalName: 'My Company, Inc.',
+    legalName: 'Gracianda House',
     foundedYear: 2024,
-    industry: 'Software / SaaS',
+    industry: 'Properti / Kost & Hunian Sewa',
     targetAudience:
-      'Developers and product teams building modern web applications who need …',
+      'Pekerja dan mahasiswa yang mencari kamar kost nyaman dengan proses sewa dan pembayaran yang jelas.',
     problemSolved:
-      'Most teams waste weeks bootstrapping the same infrastructure decisions — auth, state, i18n, design system — before they can ship any real product value.',
+      'Calon penyewa sulit mengecek ketersediaan kamar, harga, dan fasilitas kost tanpa datang langsung atau menghubungi admin satu per satu.',
     solution:
-      'My Product is a production-ready Next.js template with every architectural decision pre-made, documented, and tested, so teams can ship features from day one.',
+      'Gracianda House menyediakan denah kamar interaktif dengan status ketersediaan real-time, foto, harga, dan fasilitas — cukup klik kamar yang diminati lalu hubungi admin lewat WhatsApp.',
     keyBenefits: [
-      'Zero config — works out of the box with TypeScript, Tailwind v4, and next-intl',
-      'Opinionated patterns that scale — CVA components, Zustand stores, Zod validation',
-      'AI-agent friendly — every pattern is documented in machine-readable blueprint docs',
+      'Denah kamar interaktif — lihat status kosong/terisi tiap kamar secara langsung',
+      'Info lengkap per kamar: foto, harga, ukuran, dan fasilitas',
+      'Hubungi admin langsung lewat WhatsApp tanpa formulir berbelit',
     ],
-    contactEmail: 'contact@example.com',
+    contactEmail: 'admin@graciandahouse.com',
+    contactPhone: '+62 812-0000-0000',
+    whatsappNumber: '628120000000',
+    address: 'Jl. Contoh Alamat No. 1, Kota, Indonesia',
+    mapEmbedUrl: 'https://www.google.com/maps?q=Jakarta&output=embed',
     socialLinks: {
-      twitter: 'https://twitter.com/handle',
-      github: 'https://github.com/org/repo',
-      linkedin: 'https://linkedin.com/company/my-company',
+      instagram: 'https://instagram.com/graciandahouse',
     },
   },
 
   // ─── SEO Settings ────────────────────────────────────────────────────────────
   seo: {
-    titleTemplate: '%s | My Product',
-    defaultTitle: 'My Product — One sentence value prop',
-    twitterHandle: '@handle',
-    locale: 'en_US',
+    titleTemplate: '%s | Gracianda House',
+    defaultTitle: 'Gracianda House — Kost Nyaman & Terkelola Rapi',
+    locale: 'id_ID',
   },
 
   // ─── Pages Registry ──────────────────────────────────────────────────────────
-  // Add a new entry here every time you create a new public page.
-  // Path is locale-stripped (the sitemap helper adds locale prefixes).
   pages: {
     home: {
       path: '/',
-      title: 'My Product — One sentence value prop',
+      title: 'Gracianda House — Kost Nyaman & Terkelola Rapi',
       description:
-        'My Product is a production-ready Next.js 16 template. Ship features from day one with TypeScript, Tailwind v4, next-intl, Zustand, and full SEO / GEO / LLMs.txt support.',
+        'Cek ketersediaan kamar kost Gracianda House lewat denah interaktif — lihat foto, harga, fasilitas, dan hubungi admin langsung via WhatsApp.',
       changeFreq: 'weekly',
       priority: 1.0,
-    },
-    about: {
-      path: '/about',
-      title: 'About My Product',
-      description:
-        'Learn the story, team, and mission behind My Product — the opinionated Next.js template built for teams who want to skip the boilerplate and focus on shipping.',
-      changeFreq: 'monthly',
-      priority: 0.8,
     },
   },
 };

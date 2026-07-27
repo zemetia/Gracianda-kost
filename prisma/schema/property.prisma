@@ -1,0 +1,65 @@
+model Floor {
+  id    String @id @default(cuid())
+  name  String
+  order Int
+
+  rooms Room[]
+
+  @@map("floors")
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  floorId     String
+  floor       Floor    @relation(fields: [floorId], references: [id])
+  price       Decimal  @db.Decimal(12, 2)
+  sizeSqm     Decimal? @db.Decimal(5, 2)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  facilities  RoomFacility[]
+  contracts   Contract[]
+  maintenance MaintenanceRecord[]
+  incidents   Incident[]
+
+  @@map("rooms")
+}
+
+// Room status (available/occupied) is NOT stored here — derived at the
+// service layer from whether the room has an active Contract (see
+// contractService / roomService.list / publicRoomService).
+
+model Facility {
+  id   String  @id @default(cuid())
+  name String  @unique
+  icon String?
+
+  rooms RoomFacility[]
+
+  @@map("facilities")
+}
+
+model RoomFacility {
+  roomId     String
+  facilityId String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, facilityId])
+  @@map("room_facilities")
+}
+
+model Promo {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("promos")
+}

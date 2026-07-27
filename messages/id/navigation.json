@@ -1,8 +1,9 @@
 {
   "home": "Beranda",
-  "about": "Tentang",
-  "signIn": "Masuk",
-  "getStarted": "Mulai",
+  "rooms": "Kamar",
+  "location": "Lokasi",
+  "contact": "Kontak",
+  "signIn": "Masuk Admin",
   "openMenu": "Buka menu",
   "closeMenu": "Tutup menu"
 }

@@ -1,0 +1,33 @@
+enum IncidentCategory {
+  PELANGGARAN_ATURAN
+  GANGGUAN
+  KERUSAKAN
+  KEHILANGAN
+  KELUHAN_PENGHUNI
+  LAPORAN_SECURITY
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+model Incident {
+  id       String           @id @default(cuid())
+  category IncidentCategory
+  status   IncidentStatus   @default(OPEN)
+  date     DateTime
+  roomId   String?
+  room     Room?            @relation(fields: [roomId], references: [id])
+  location String? // non-room location, e.g. "Parkiran"
+
+  description String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId, date])
+  @@index([status])
+  @@map("incidents")
+}

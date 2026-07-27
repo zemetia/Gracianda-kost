@@ -1,0 +1,30 @@
+enum AttachmentEntity {
+  ROOM
+  TENANT
+  CONTRACT
+  PAYMENT
+  MAINTENANCE
+  INCIDENT
+}
+
+enum AttachmentKind {
+  PHOTO
+  VIDEO
+  DOCUMENT
+}
+
+model Attachment {
+  id         String           @id @default(cuid())
+  entityType AttachmentEntity
+  entityId   String
+  kind       AttachmentKind
+  // Local disk path in Fase 1 (e.g. "/uploads/room/<id>/<file>").
+  // Swap the storage backend later without touching this field's shape —
+  // it always stores a fetchable URL, not a filesystem path.
+  url        String
+  label      String?
+  createdAt  DateTime         @default(now())
+
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
