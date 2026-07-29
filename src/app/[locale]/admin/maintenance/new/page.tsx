@@ -5,7 +5,12 @@ import { propertyService } from '@/services/property.service';
 
 import { MaintenanceForm } from '../MaintenanceForm';
 
-export default async function NewMaintenancePage() {
+interface Props {
+  searchParams: Promise<{ propertyId?: string; roomId?: string }>;
+}
+
+export default async function NewMaintenancePage({ searchParams }: Props) {
+  const { propertyId, roomId } = await searchParams;
   const [properties, rooms, categories] = await Promise.all([
     propertyService.listActive(),
     roomService.list(),
@@ -28,6 +33,8 @@ export default async function NewMaintenancePage() {
               floor: r.floor ? { name: r.floor.name } : null,
             }))}
             categories={categories}
+            initialPropertyId={propertyId}
+            initialRoomId={roomId}
           />
         </CardContent>
       </Card>

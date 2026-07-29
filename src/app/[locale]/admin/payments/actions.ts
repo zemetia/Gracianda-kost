@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { requireRole } from '@/lib/auth';
+import { requireAuth, requireRole } from '@/lib/auth';
 import { addPartialPaymentSchema } from '@/lib/validations';
 import { paymentService } from '@/services/payment.service';
 import { auditService } from '@/services/audit.service';
@@ -29,6 +29,18 @@ export async function generateInvoicesAction(): Promise<{ created: number } | { 
 
   revalidatePath('/admin/payments');
   return result;
+}
+
+/**
+ * Records that a reminder was opened. Any logged-in admin may do this — it is
+ * a note that the tenant was contacted, not a change to the money.
+ */
+export async function logReminderAction(paymentId: string): Promise<void> {
+  const session = await requireAuth();
+  await paymentService.logReminder(paymentId, session.user.id);
+
+  revalidatePath('/admin/payments');
+  revalidatePath(`/admin/payments/${paymentId}`);
 }
 
 export async function markAsPaidAction(id: string): Promise<void> {

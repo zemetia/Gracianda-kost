@@ -1,15 +1,18 @@
+import { CalendarPlus, DoorOpen, LogOut } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { contractService } from '@/services/contract.service';
+import { paymentService } from '@/services/payment.service';
 
-import { CloseContractForm } from './CloseContractForm';
+import { ContractCreatedBanner } from './ContractCreatedBanner';
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string }>;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,10 +34,37 @@ function formatBillingCycle(cycle: string, interval: number): string {
   return `${interval} ${label}`;
 }
 
-export default async function ContractDetailPage({ params }: Props) {
+// The three things an admin actually wants to do with a running contract.
+// Naming them by intent means no one has to translate "perpanjang" into
+// "tutup kontrak lalu buat kontrak baru" ever again.
+const INTENTS = [
+  {
+    href: 'renew',
+    icon: CalendarPlus,
+    title: 'Perpanjang',
+    description: 'Lanjut di kamar yang sama untuk masa sewa berikutnya.',
+  },
+  {
+    href: 'transfer',
+    icon: DoorOpen,
+    title: 'Pindah Kamar',
+    description: 'Penyewa sama, kamar berbeda, mulai tanggal pindah.',
+  },
+  {
+    href: 'checkout',
+    icon: LogOut,
+    title: 'Check-out',
+    description: 'Penyewa keluar: tunggakan, deposit, dan kondisi kamar.',
+  },
+] as const;
+
+export default async function ContractDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { created } = await searchParams;
   const contract = await contractService.getById(id);
   if (!contract) notFound();
+
+  const outstanding = await paymentService.getOutstandingByContract(id);
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -54,6 +84,20 @@ export default async function ContractDetailPage({ params }: Props) {
           {STATUS_LABEL[contract.status]}
         </Badge>
       </div>
+
+      {created === '1' && (
+        <ContractCreatedBanner
+          tenantId={contract.tenantId}
+          tenantName={contract.tenant.fullName}
+          tenantPhone={contract.tenant.phone}
+          contractCode={contract.contractCode}
+          roomNumber={contract.room.number}
+          rentPrice={contract.rentPrice.toNumber()}
+          billingCycle={contract.billingCycle}
+          billingInterval={contract.billingInterval}
+          startDate={contract.startDate}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -112,13 +156,85 @@ export default async function ContractDetailPage({ params }: Props) {
         </Card>
       )}
 
+      {(contract.previousContract || contract.nextContract) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Rantai Kontrak</CardTitle>
+            <CardDescription>Kontrak ini bagian dari satu masa tinggal yang berlanjut.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-4 text-sm">
+            {contract.previousContract && (
+              <Link
+                href={`/admin/contracts/${contract.previousContract.id}`}
+                className="text-primary hover:underline"
+              >
+                ← Sebelumnya: {contract.previousContract.contractCode}
+              </Link>
+            )}
+            {contract.nextContract && (
+              <Link
+                href={`/admin/contracts/${contract.nextContract.id}`}
+                className="text-primary hover:underline"
+              >
+                Lanjutan: {contract.nextContract.contractCode} →
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {contract.status === 'ACTIVE' && (
         <Card>
           <CardHeader>
-            <CardTitle>Tutup Kontrak</CardTitle>
+            <CardTitle>Tindakan</CardTitle>
+            <CardDescription>
+              {outstanding > 0
+                ? `Sisa tunggakan Rp ${outstanding.toLocaleString('id-ID')} — selesaikan sebelum penyewa keluar.`
+                : 'Semua tagihan kontrak ini sudah lunas.'}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <CloseContractForm contractId={contract.id} />
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {INTENTS.map((intent) => (
+              <Link
+                key={intent.href}
+                href={`/admin/contracts/${contract.id}/${intent.href}`}
+                className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-raised p-4 transition-colors hover:border-primary/40 hover:bg-primary-subtle"
+              >
+                <intent.icon className="h-5 w-5 text-primary" aria-hidden="true" />
+                <span className="text-sm font-semibold text-foreground">{intent.title}</span>
+                <span className="text-xs leading-relaxed text-foreground-muted">
+                  {intent.description}
+                </span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {contract.status !== 'ACTIVE' && contract.depositRefunded !== null && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Penyelesaian Deposit</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <Typography variant="muted">Potongan</Typography>
+              <Typography variant="p">
+                Rp {(contract.depositDeduction?.toNumber() ?? 0).toLocaleString('id-ID')}
+              </Typography>
+            </div>
+            <div>
+              <Typography variant="muted">Dikembalikan</Typography>
+              <Typography variant="p">
+                Rp {contract.depositRefunded.toNumber().toLocaleString('id-ID')}
+              </Typography>
+            </div>
+            {contract.depositNote && (
+              <div className="col-span-2">
+                <Typography variant="muted">Catatan</Typography>
+                <Typography variant="p">{contract.depositNote}</Typography>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

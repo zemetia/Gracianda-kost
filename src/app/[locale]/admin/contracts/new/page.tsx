@@ -1,11 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { getPropertyScope } from '@/lib/property-scope';
 import { roomService } from '@/services/room.service';
 import { tenantService } from '@/services/tenant.service';
 
 import { NewContractForm } from '../NewContractForm';
 
-export default async function NewContractPage() {
-  const [tenants, rooms] = await Promise.all([tenantService.list(), roomService.listAvailable()]);
+interface Props {
+  searchParams: Promise<{ propertyId?: string; roomId?: string }>;
+}
+
+export default async function NewContractPage({ searchParams }: Props) {
+  const { propertyId, roomId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
+
+  const [tenants, rooms] = await Promise.all([
+    tenantService.list(),
+    roomService.listAvailable(scopedPropertyId),
+  ]);
 
   return (
     <div className="max-w-2xl">
@@ -15,7 +26,15 @@ export default async function NewContractPage() {
         </CardHeader>
         <CardContent>
           <NewContractForm
-            tenants={tenants.map((t) => ({ id: t.id, fullName: t.fullName, ktpNumber: t.ktpNumber }))}
+            preselectedRoomId={roomId}
+            tenants={tenants.map((t) => ({
+              id: t.id,
+              fullName: t.fullName,
+              ktpNumber: t.ktpNumber,
+              phone: t.phone,
+              isBlacklisted: t.isBlacklisted,
+              blacklistNote: t.blacklistNote,
+            }))}
             rooms={rooms.map((r) => ({
               id: r.id,
               number: r.number,

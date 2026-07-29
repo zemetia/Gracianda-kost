@@ -52,7 +52,15 @@
 <!-- Add dated insights here as they are discovered -->
 <!-- Format: `[YYYY-MM-DD] insight` -->
 
-- [2026-07-27] Redesign halaman landing page public dengan UI bertumpuk (Stacked Floor Plan) untuk simulasi gedung hunian kost riil serta memperkaya section dengan visual premium nyata.
+- [2026-07-28] Empat prinsip flow admin (dipakai sebagai acuan setiap halaman admin baru): (1) sistem yang mengingatkan — antrean aksi di atas, statistik di bawah; (2) aksi ada di baris tempat datanya terlihat, bukan 2 klik ke halaman detail; (3) satu niat bisnis = satu tombol (Perpanjang / Pindah Kamar / Check-out, bukan "tutup lalu buat baru"); (4) setiap angka di dashboard adalah link ke list yang sudah terfilter
+- [2026-07-28] Identitas periode tagihan adalah `Payment.periodStart`, bukan bulan kalender — `periodMonth/periodYear` tinggal kunci denormalisasi untuk laporan. Konsekuensinya kontrak harian/mingguan punya banyak periode dalam satu bulan dan akhirnya bisa ditagih; jatuh tempo memakai tanggal anniversary kontrak, bukan tanggal 5 global
+- [2026-07-28] Aturan periode tagihan murni ada di `src/lib/billing.ts` (tanpa import prisma) supaya service dan unit test memakai implementasi yang sama — sebelumnya logikanya disalin ke file test dan berpotensi menyimpang
+- [2026-07-28] Konteks properti aktif adalah state global admin: cookie `admin_property_id` lewat `getPropertyScope()` di `src/lib/property-scope.ts`, switcher di `admin/layout.tsx`. Halaman list tetap menerima `?propertyId` sebagai override eksplisit (deep link dari action queue) — pola: `getPropertyScope(searchParamPropertyId)`
+- [2026-07-28] Untuk daftar panjang (penyewa/kamar) pakai `SearchablePicker` (ketik-untuk-filter + hidden input), bukan `<select>` — `<select>` berisi seluruh penyewa berhenti berguna di ~50 baris. Blacklist ditangani sebagai peringatan + checkbox konfirmasi yang mengunci tombol submit, bukan blokir keras
+
+- [2026-07-28] Widget dashboard yang berisi angka/aksi harus di-gate memakai daftar role yang sama persis dengan layout guard halaman tujuannya — item antrean yang bisa dilihat tapi berujung `<Forbidden />` lebih buruk daripada tidak ditampilkan
+- [2026-07-29] Sidebar admin memakai gaya ERP: baris nav tinggi tetap `h-11` (bukan `py-2`), penanda aktif berupa accent bar `bg-primary` di tepi kiri + `bg-primary-subtle`, dan collapse-to-icon-rail (`w-[4.5rem]`) yang dipersist di `admin_sidebar_collapsed`. Animasi buka/tutup section pakai trik `grid-rows-[1fr]`↔`[0fr]` — bukan `max-h-[...]` yang harus ditebak dan memotong section panjang
+- [2026-07-28] Redesign halaman landing page public dengan UI bertumpuk (Stacked Floor Plan) untuk simulasi gedung hunian kost riil serta memperkaya section dengan visual premium nyata.
 
 - [2026-06-06] Developer explicitly designed a two-tier learning system: THIS.md for general knowledge, LEARN.md for corrections — treat both as first-class project docs
 - [2026-07-27] Pola guard route admin: `canAccess()` + `<Forbidden />` di layout/page, `requireRole()` (throw) di Server Action — jangan campur
