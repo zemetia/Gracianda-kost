@@ -87,3 +87,16 @@ export interface HealthResponse {
   timestamp: string;
   version: string;
 }
+
+export interface SearchResultItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+}
+
+export interface AdminSearchResponse {
+  rooms: SearchResultItem[];
+  tenants: SearchResultItem[];
+  contracts: SearchResultItem[];
+}

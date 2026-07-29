@@ -5,11 +5,18 @@ import { Input } from '@/components/ui/Input';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
+import { getPropertyScope } from '@/lib/property-scope';
 import { maintenanceService } from '@/services/maintenance.service';
 import { roomService } from '@/services/room.service';
 
 interface Props {
-  searchParams: Promise<{ scope?: string; floorId?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    scope?: string;
+    floorId?: string;
+    from?: string;
+    to?: string;
+    propertyId?: string;
+  }>;
 }
 
 const SCOPE_LABEL: Record<string, string> = {
@@ -18,15 +25,17 @@ const SCOPE_LABEL: Record<string, string> = {
 };
 
 export default async function MaintenancePage({ searchParams }: Props) {
-  const { scope, floorId, from, to } = await searchParams;
+  const { scope, floorId, from, to, propertyId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
   const [records, floors, session] = await Promise.all([
     maintenanceService.list({
       scope: scope === 'ROOM' || scope === 'BUILDING' ? scope : undefined,
+      propertyId: scopedPropertyId,
       floorId: floorId || undefined,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
     }),
-    roomService.listFloors(),
+    roomService.listFloors(scopedPropertyId),
     getSession(),
   ]);
   const canCreate = session && ['SUPER_ADMIN', 'OPERASIONAL'].includes(session.user.role);

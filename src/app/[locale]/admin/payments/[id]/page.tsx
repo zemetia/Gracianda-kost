@@ -7,11 +7,11 @@ import { getSession } from '@/lib/auth';
 import { attachmentService } from '@/services/attachment.service';
 import { getPaymentStatus, paymentService } from '@/services/payment.service';
 
+import { MarkPaidButton } from '../MarkPaidButton';
 import { PaymentStatusBadge } from '../PaymentStatusBadge';
+import { SendWaButton } from '../SendWaButton';
 import { AddPaymentForm } from './AddPaymentForm';
-import { MarkPaidButton } from './MarkPaidButton';
 import { PaymentProofUpload } from './PaymentProofUpload';
-import { SendWaButton } from './SendWaButton';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -98,6 +98,7 @@ export default async function PaymentDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent>
             <SendWaButton
+              paymentId={payment.id}
               phone={payment.contract.tenant.phone}
               tenantName={payment.contract.tenant.fullName}
               contractCode={payment.contract.contractCode}

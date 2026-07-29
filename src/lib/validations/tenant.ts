@@ -32,8 +32,32 @@ export const newContractSchema = z.object({
   occupants: z.array(occupantSchema).default([]),
 });
 
-export const closeContractSchema = z.object({
+// The term of a follow-on contract — shared by "Perpanjang" and "Pindah Kamar",
+// which differ only in whether the room changes.
+const contractTermSchema = z.object({
+  rentPrice: z.coerce.number().positive('Harga sewa harus lebih dari 0'),
+  deposit: z.coerce.number().min(0).optional(),
+  billingCycle: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).default('MONTHLY'),
+  billingInterval: z.coerce.number().int().min(1).default(1),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+export const renewContractSchema = contractTermSchema;
+
+export const transferRoomSchema = contractTermSchema.extend({
+  roomId: z.string().min(1, 'Kamar tujuan wajib dipilih'),
+});
+
+// depositRefunded is deliberately absent — it is derived from deposit minus
+// deduction in the service, so the two numbers can never contradict each other.
+export const checkoutContractSchema = z.object({
   actualEndDate: z.coerce.date(),
+  depositDeduction: z.coerce.number().min(0).optional(),
+  depositNote: z.string().max(500).optional(),
+  damageNote: z.string().max(500).optional(),
+  damageCost: z.coerce.number().min(0).optional(),
 });
 
 export const blacklistSchema = z.object({
@@ -44,5 +68,7 @@ export const blacklistSchema = z.object({
 export type TenantInput = z.infer<typeof tenantSchema>;
 export type OccupantInput = z.infer<typeof occupantSchema>;
 export type NewContractInput = z.infer<typeof newContractSchema>;
-export type CloseContractInput = z.infer<typeof closeContractSchema>;
+export type RenewContractInput = z.infer<typeof renewContractSchema>;
+export type TransferRoomInput = z.infer<typeof transferRoomSchema>;
+export type CheckoutContractInput = z.infer<typeof checkoutContractSchema>;
 export type BlacklistInput = z.infer<typeof blacklistSchema>;

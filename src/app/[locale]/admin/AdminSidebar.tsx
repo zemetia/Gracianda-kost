@@ -16,7 +16,8 @@ import {
   UserCog,
   LogOut,
   ChevronDown,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   Menu,
   X,
   Building,
@@ -164,15 +165,21 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+const DEFAULT_SECTIONS: Record<string, boolean> = {
+  'master-data': true,
+  operasional: true,
+  laporan: true,
+  sistem: true,
+};
+
+const SECTIONS_KEY = 'admin_sidebar_sections';
+const COLLAPSED_KEY = 'admin_sidebar_collapsed';
+
 export function AdminSidebar({ role, userName }: { role: string; userName: string }) {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    'master-data': true,
-    'operasional': true,
-    'laporan': true,
-    'sistem': true,
-  });
+  const [isRail, setIsRail] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(DEFAULT_SECTIONS);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -180,161 +187,206 @@ export function AdminSidebar({ role, userName }: { role: string; userName: strin
   }, [pathname]);
 
   useEffect(() => {
-    // 1. Read from localStorage
-    let currentSectionsState: Record<string, boolean> = {
-      'master-data': true,
-      'operasional': true,
-      'laporan': true,
-      'sistem': true,
-    };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsRail(localStorage.getItem(COLLAPSED_KEY) === '1');
+  }, []);
 
-    const saved = localStorage.getItem('admin_sidebar_sections');
+  useEffect(() => {
+    let sectionsState = { ...DEFAULT_SECTIONS };
+
+    const saved = localStorage.getItem(SECTIONS_KEY);
     if (saved) {
       try {
-        currentSectionsState = { ...currentSectionsState, ...JSON.parse(saved) };
+        sectionsState = { ...sectionsState, ...JSON.parse(saved) };
       } catch (e) {
         console.error('Failed to parse sidebar sections state', e);
       }
     }
 
-    // 2. Auto-expand section matching current route
+    // Auto-expand the section that owns the current route so the active item is
+    // never hidden behind a collapsed header.
     const activeSection = SECTIONS.find((section) =>
       section.items.some((item) => pathname.startsWith(item.href))
     );
 
     if (activeSection) {
-      currentSectionsState[activeSection.id] = true;
-      localStorage.setItem('admin_sidebar_sections', JSON.stringify(currentSectionsState));
+      sectionsState[activeSection.id] = true;
+      localStorage.setItem(SECTIONS_KEY, JSON.stringify(sectionsState));
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOpenSections(currentSectionsState);
+    setOpenSections(sectionsState);
   }, [pathname]);
+
+  // The drawer is a full-screen overlay: freeze the page behind it and let Esc close it.
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isMobileOpen]);
 
   const toggleSection = (id: string) => {
     setOpenSections((prev) => {
       const updated = { ...prev, [id]: !prev[id] };
-      localStorage.setItem('admin_sidebar_sections', JSON.stringify(updated));
+      localStorage.setItem(SECTIONS_KEY, JSON.stringify(updated));
       return updated;
     });
   };
 
-  // Filter sections and items based on role
-  const filteredSections = SECTIONS.map((section) => {
-    const items = section.items.filter((item) => item.roles.includes(role));
-    return { ...section, items };
-  }).filter((section) => section.items.length > 0);
+  const toggleRail = () => {
+    setIsRail((prev) => {
+      localStorage.setItem(COLLAPSED_KEY, prev ? '0' : '1');
+      return !prev;
+    });
+  };
+
+  const filteredSections = SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => item.roles.includes(role)),
+  })).filter((section) => section.items.length > 0);
 
   const showDashboard = DASHBOARD_ITEM.roles.includes(role);
 
-  const renderSidebarContent = () => (
+  const renderNavItem = (item: NavItem, active: boolean, rail: boolean) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      title={rail ? item.label : undefined}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'group relative flex h-11 items-center rounded-lg text-sm font-medium transition-colors duration-200',
+        rail ? 'justify-center px-0' : 'gap-3 px-3',
+        active
+          ? 'bg-primary-subtle text-primary font-semibold'
+          : 'text-foreground-muted hover:bg-surface-raised hover:text-foreground',
+      )}
+    >
+      {/* Accent rail on the active row — the ERP convention for "you are here". */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          'absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-opacity duration-200',
+          active ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+      <item.icon
+        className={cn('h-[1.15rem] w-[1.15rem] shrink-0', active ? 'text-primary' : 'text-foreground-subtle group-hover:text-foreground')}
+        aria-hidden="true"
+      />
+      {!rail && <span className="truncate">{item.label}</span>}
+    </Link>
+  );
+
+  const renderSidebarContent = (rail: boolean) => (
     <div className="flex h-full flex-col">
-      {/* Brand Header */}
-      <div className="flex h-16 items-center gap-3 border-b border-border px-6 bg-surface-raised/40">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md shadow-primary-glow">
+      {/* Brand header */}
+      <div
+        className={cn(
+          'flex h-16 shrink-0 items-center border-b border-border bg-surface-raised/40',
+          rail ? 'justify-center px-2' : 'gap-3 px-4',
+        )}
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-md shadow-primary-glow">
           G
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-bold tracking-tight text-foreground">Gracianda House</span>
-          <span className="text-[10px] text-foreground-muted font-semibold uppercase tracking-wider">Admin Portal</span>
-        </div>
-      </div>
-
-      {/* Navigation Areas */}
-      <nav
-        aria-label="Admin navigation"
-        className="flex-1 space-y-5 overflow-y-auto p-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
-      >
-        {/* Dashboard Link */}
-        {showDashboard && (
-          <div className="space-y-1">
-            <Link
-              href={DASHBOARD_ITEM.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-250',
-                pathname === DASHBOARD_ITEM.href
-                  ? 'bg-primary-subtle text-primary shadow-xs font-semibold'
-                  : 'text-foreground-muted hover:bg-surface-raised hover:text-foreground',
-              )}
-            >
-              <DASHBOARD_ITEM.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{DASHBOARD_ITEM.label}</span>
-            </Link>
+        {!rail && (
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-bold tracking-tight text-foreground">Gracianda House</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
+              Admin Portal
+            </span>
           </div>
         )}
+      </div>
 
-        {/* Collapsible Sections */}
+      <nav
+        aria-label="Admin navigation"
+        className={cn(
+          'flex-1 overflow-y-auto overflow-x-hidden py-4',
+          '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent',
+          rail ? 'space-y-2 px-2' : 'space-y-4 px-3',
+        )}
+      >
+        {showDashboard && renderNavItem(DASHBOARD_ITEM, pathname === DASHBOARD_ITEM.href, rail)}
+
         {filteredSections.map((section) => {
-          const isOpen = openSections[section.id] !== false; // Default to true
+          const isOpen = rail || openSections[section.id] !== false;
           return (
-            <div key={section.id} className="space-y-1.5">
-              {/* Section Header Button */}
-              <button
-                type="button"
-                onClick={() => toggleSection(section.id)}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-foreground-muted/80 hover:bg-surface-raised hover:text-foreground transition-all duration-150 cursor-pointer focus:outline-hidden"
-              >
-                <span>{section.title}</span>
-                {isOpen ? (
-                  <ChevronDown className="h-3.5 w-3.5 text-foreground-muted/60 transition-transform duration-200" />
-                ) : (
-                  <ChevronRight className="h-3.5 w-3.5 text-foreground-muted/60 transition-transform duration-200" />
-                )}
-              </button>
+            <div key={section.id} className={cn(rail ? 'space-y-2 border-t border-border/70 pt-2' : 'space-y-1')}>
+              {!rail && (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
+                  className="flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-foreground-subtle transition-colors duration-150 hover:text-foreground"
+                >
+                  <span>{section.title}</span>
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 transition-transform duration-200',
+                      isOpen ? 'rotate-0' : '-rotate-90',
+                    )}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
 
-              {/* Section Items Container with height and opacity transition */}
+              {/* grid-rows 1fr↔0fr animates to the content's real height — no max-h guess. */}
               <div
                 className={cn(
-                  'space-y-1 overflow-hidden transition-all duration-300 ease-in-out pl-2 border-l border-border/60 ml-2.5',
-                  isOpen
-                    ? 'max-h-[300px] opacity-100 visibility-visible'
-                    : 'max-h-0 opacity-0 pointer-events-none visibility-hidden'
+                  'grid transition-[grid-template-rows] duration-300 ease-in-out',
+                  isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
                 )}
               >
-                {section.items.map((item) => {
-                  const active = pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200',
-                        active
-                          ? 'bg-primary-subtle text-primary shadow-xs font-semibold'
-                          : 'text-foreground-muted hover:bg-surface-raised hover:text-foreground',
-                      )}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                <div className={cn('overflow-hidden', !isOpen && 'pointer-events-none')}>
+                  <div className="space-y-1">
+                    {section.items.map((item) =>
+                      renderNavItem(item, pathname.startsWith(item.href), rail),
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           );
         })}
       </nav>
 
-      {/* User Footer Profile & Sign Out */}
-      <div className="border-t border-border p-4 bg-surface-raised/20">
-        <div className="flex items-center gap-3 mb-3 px-1">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm shadow-xs">
+      {/* User footer */}
+      <div className={cn('shrink-0 border-t border-border bg-surface-raised/20 p-3', rail && 'px-2')}>
+        <div className={cn('mb-2 flex items-center', rail ? 'justify-center' : 'gap-3 px-1 py-1')}>
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-sm font-semibold text-primary"
+            title={rail ? userName : undefined}
+          >
             {userName ? userName.charAt(0).toUpperCase() : 'U'}
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold text-foreground truncate">{userName}</span>
-            <span className="text-[10px] text-foreground-muted font-medium capitalize truncate">
-              {role.toLowerCase().replace('_', ' ')}
-            </span>
-          </div>
+          {!rail && (
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-semibold text-foreground">{userName}</span>
+              <span className="truncate text-[10px] font-medium capitalize text-foreground-muted">
+                {role.toLowerCase().replace('_', ' ')}
+              </span>
+            </div>
+          )}
         </div>
         <form action={signOutAction}>
           <button
             type="submit"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground-muted transition-all duration-200 hover:bg-destructive-subtle hover:text-destructive cursor-pointer focus:outline-hidden"
+            title={rail ? 'Keluar' : undefined}
+            className={cn(
+              'flex h-11 w-full cursor-pointer items-center rounded-lg text-sm font-medium text-foreground-muted transition-colors duration-200 hover:bg-destructive-subtle hover:text-destructive',
+              rail ? 'justify-center px-0' : 'gap-3 px-3',
+            )}
           >
-            <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>Keluar</span>
+            <LogOut className="h-[1.15rem] w-[1.15rem] shrink-0" aria-hidden="true" />
+            {!rail && <span>Keluar</span>}
           </button>
         </form>
       </div>
@@ -343,51 +395,67 @@ export function AdminSidebar({ role, userName }: { role: string; userName: strin
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-surface print:hidden shadow-xs h-screen sticky top-0">
-        {renderSidebarContent()}
+      {/* Desktop sidebar — collapses to an icon rail on demand */}
+      <aside
+        className={cn(
+          'sticky top-0 z-30 hidden h-screen shrink-0 flex-col border-r border-border bg-surface shadow-xs transition-[width] duration-300 ease-in-out md:flex print:hidden',
+          isRail ? 'w-[4.5rem]' : 'w-64 xl:w-72',
+        )}
+      >
+        {renderSidebarContent(isRail)}
+        <button
+          type="button"
+          onClick={toggleRail}
+          aria-label={isRail ? 'Perluas sidebar' : 'Ciutkan sidebar'}
+          title={isRail ? 'Perluas sidebar' : 'Ciutkan sidebar'}
+          className="absolute -right-3 top-20 hidden h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-foreground-muted shadow-xs transition-colors hover:border-border-strong hover:text-foreground lg:flex"
+        >
+          {isRail ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+        </button>
       </aside>
 
-      {/* Mobile Top Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 border-b border-border bg-surface flex items-center justify-between px-4 z-40 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-xs">
+      {/* Mobile top bar */}
+      <div className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-surface px-4 shadow-xs md:hidden print:hidden">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground shadow-xs">
             G
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-tight text-foreground leading-none">Gracianda House</span>
-            <span className="text-[10px] text-foreground-muted font-semibold uppercase tracking-wider mt-0.5">Admin Portal</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-bold leading-none tracking-tight text-foreground">
+              Gracianda House
+            </span>
+            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground-muted">
+              Admin Portal
+            </span>
           </div>
         </div>
         <button
+          type="button"
           onClick={() => setIsMobileOpen(true)}
-          className="p-2 text-foreground-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded-lg cursor-pointer"
-          aria-label="Open menu"
+          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+          aria-label="Buka menu"
         >
           <Menu className="h-6 w-6" />
         </button>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile drawer */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop overlay */}
+        <div className="fixed inset-0 z-50 flex md:hidden">
           <div
-            className="fixed inset-0 bg-background/80 backdrop-blur-xs transition-opacity duration-200"
+            className="absolute inset-0 bg-background/70 backdrop-blur-xs"
             onClick={() => setIsMobileOpen(false)}
           />
-          {/* Drawer content */}
-          <aside className="relative flex w-64 flex-col bg-surface border-r border-border h-full z-50 animate-in slide-in-from-left duration-200">
-            <div className="absolute top-4 right-4 z-50">
-              <button
-                onClick={() => setIsMobileOpen(false)}
-                className="p-1 text-foreground-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded-md cursor-pointer"
-                aria-label="Close menu"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            {renderSidebarContent()}
+          <aside className="relative z-10 flex h-full w-[17rem] max-w-[85vw] flex-col border-r border-border bg-surface shadow-lg animate-in slide-in-from-left duration-200">
+            <button
+              type="button"
+              onClick={() => setIsMobileOpen(false)}
+              className="absolute right-3 top-4 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+              aria-label="Tutup menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {renderSidebarContent(false)}
           </aside>
         </div>
       )}

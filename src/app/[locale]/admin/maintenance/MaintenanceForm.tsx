@@ -25,14 +25,18 @@ export function MaintenanceForm({
   properties,
   rooms,
   categories,
+  initialPropertyId,
+  initialRoomId,
 }: {
   properties: Property[];
   rooms: Room[];
   categories: string[];
+  initialPropertyId?: string | undefined;
+  initialRoomId?: string | undefined;
 }) {
   const [state, formAction, isPending] = useActionState(createMaintenanceAction, initialState);
   const [scope, setScope] = useState<'ROOM' | 'BUILDING'>('ROOM');
-  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+  const [selectedPropertyId, setSelectedPropertyId] = useState(initialPropertyId ?? '');
 
   const filteredRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
 
@@ -95,6 +99,7 @@ export function MaintenanceForm({
             id="roomId"
             name="roomId"
             required={scope === 'ROOM'}
+            defaultValue={initialRoomId ?? ''}
             className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Pilih kamar/unit</option>

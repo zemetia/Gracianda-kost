@@ -5,7 +5,13 @@ import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 
 import { requireRole } from '@/lib/auth';
-import { closeContractSchema, newContractSchema, tenantSchema } from '@/lib/validations';
+import {
+  checkoutContractSchema,
+  newContractSchema,
+  renewContractSchema,
+  tenantSchema,
+  transferRoomSchema,
+} from '@/lib/validations';
 import { contractService } from '@/services/contract.service';
 import { attachmentService } from '@/services/attachment.service';
 import { auditService } from '@/services/audit.service';
@@ -83,35 +89,136 @@ export async function createContractAction(
   revalidatePath('/admin/master-data/rooms');
   revalidatePath('/admin/tenants');
   const locale = await getLocale();
+  redirect({ href: `/admin/contracts/${contract.id}?created=1`, locale });
+  return {};
+}
+
+/** Shared reader for the "Perpanjang" / "Pindah Kamar" term fields. */
+function readTermFields(formData: FormData) {
+  return {
+    rentPrice: formData.get('rentPrice'),
+    deposit: formData.get('deposit') || undefined,
+    billingCycle: formData.get('billingCycle') || undefined,
+    billingInterval: formData.get('billingInterval') || undefined,
+    startDate: formData.get('startDate'),
+    endDate: formData.get('endDate') || undefined,
+    notes: formData.get('notes') || undefined,
+  };
+}
+
+export async function renewContractAction(
+  id: string,
+  _prevState: ContractFormState,
+  formData: FormData,
+): Promise<ContractFormState> {
+  const session = await requireRole(CAN_MANAGE);
+
+  const parsed = renewContractSchema.safeParse(readTermFields(formData));
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+
+  let contract;
+  try {
+    contract = await contractService.renew(id, parsed.data);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal memperpanjang kontrak' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'CREATE',
+    entityType: 'Contract',
+    entityId: contract.id,
+    before: { previousContractId: id },
+    after: { contractCode: contract.contractCode, reason: 'RENEWAL' },
+  });
+
+  revalidatePath('/admin/contracts');
+  revalidatePath(`/admin/contracts/${id}`);
+  revalidatePath('/admin/payments');
+  const locale = await getLocale();
   redirect({ href: `/admin/contracts/${contract.id}`, locale });
   return {};
 }
 
-export interface CloseContractFormState {
-  error?: string;
-  fieldErrors?: Record<string, string[]>;
-}
-
-export async function closeContractAction(
+export async function transferRoomAction(
   id: string,
-  _prevState: CloseContractFormState,
+  _prevState: ContractFormState,
   formData: FormData,
-): Promise<CloseContractFormState> {
+): Promise<ContractFormState> {
   const session = await requireRole(CAN_MANAGE);
-  const parsed = closeContractSchema.safeParse({ actualEndDate: formData.get('actualEndDate') });
+
+  const parsed = transferRoomSchema.safeParse({
+    ...readTermFields(formData),
+    roomId: formData.get('roomId'),
+  });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
-  await contractService.close(id, parsed.data);
+  let contract;
+  try {
+    contract = await contractService.transferRoom(id, parsed.data);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal memindahkan kamar' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'CREATE',
+    entityType: 'Contract',
+    entityId: contract.id,
+    before: { previousContractId: id },
+    after: { contractCode: contract.contractCode, roomId: contract.roomId, reason: 'TRANSFER' },
+  });
+
+  revalidatePath('/admin/contracts');
+  revalidatePath(`/admin/contracts/${id}`);
+  revalidatePath('/admin/master-data/rooms');
+  const locale = await getLocale();
+  redirect({ href: `/admin/contracts/${contract.id}`, locale });
+  return {};
+}
+
+export async function checkoutContractAction(
+  id: string,
+  _prevState: ContractFormState,
+  formData: FormData,
+): Promise<ContractFormState> {
+  const session = await requireRole(CAN_MANAGE);
+
+  const parsed = checkoutContractSchema.safeParse({
+    actualEndDate: formData.get('actualEndDate'),
+    depositDeduction: formData.get('depositDeduction') || undefined,
+    depositNote: formData.get('depositNote') || undefined,
+    damageNote: formData.get('damageNote') || undefined,
+    damageCost: formData.get('damageCost') || undefined,
+  });
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+
+  let contract;
+  try {
+    contract = await contractService.checkout(id, parsed.data);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal memproses check-out' };
+  }
+
   await auditService.log({
     userId: session.user.id,
     action: 'UPDATE',
     entityType: 'Contract',
     entityId: id,
-    after: { status: 'ENDED', actualEndDate: parsed.data.actualEndDate },
+    after: {
+      status: 'ENDED',
+      endReason: 'CHECKOUT',
+      actualEndDate: parsed.data.actualEndDate,
+      depositRefunded: contract.depositRefunded?.toString(),
+      depositDeduction: contract.depositDeduction?.toString(),
+    },
   });
 
+  revalidatePath('/admin/contracts');
   revalidatePath('/admin/master-data/rooms');
-  revalidatePath(`/admin/contracts/${id}`);
+  revalidatePath('/admin/maintenance');
+  const locale = await getLocale();
+  redirect({ href: `/admin/contracts/${id}`, locale });
   return {};
 }
 

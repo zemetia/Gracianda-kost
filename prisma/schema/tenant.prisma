@@ -23,6 +23,15 @@ enum ContractStatus {
   CANCELLED
 }
 
+// Kenapa kontrak berakhir — membedakan "penghuni benar-benar keluar" dari
+// "pindah kamar" dan "perpanjang", yang di laporan penyewa artinya beda jauh.
+enum ContractEndReason {
+  CHECKOUT
+  TRANSFER
+  RENEWAL
+  CANCELLED
+}
+
 model Contract {
   id           String @id @default(cuid())
   contractCode String @unique // "GH-250001"
@@ -41,7 +50,21 @@ model Contract {
   startDate       DateTime
   endDate         DateTime?
   actualEndDate   DateTime?
+  endReason       ContractEndReason?
   notes           String?
+
+  // Renewal / room-transfer chain. Set when this contract was produced from
+  // another one via "Perpanjang" or "Pindah Kamar", so the tenant's timeline
+  // stays linkable instead of looking like unrelated contracts.
+  previousContractId String?   @unique
+  previousContract   Contract? @relation("ContractChain", fields: [previousContractId], references: [id])
+  nextContract       Contract? @relation("ContractChain")
+
+  // Deposit settlement, filled at check-out. Deposit taken but never recorded
+  // as returned/deducted is the single biggest source of tenant disputes.
+  depositDeduction Decimal? @db.Decimal(12, 2)
+  depositRefunded  Decimal? @db.Decimal(12, 2)
+  depositNote      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

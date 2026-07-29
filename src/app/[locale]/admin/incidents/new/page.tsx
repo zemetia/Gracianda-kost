@@ -4,7 +4,12 @@ import { propertyService } from '@/services/property.service';
 
 import { IncidentForm } from '../IncidentForm';
 
-export default async function NewIncidentPage() {
+interface Props {
+  searchParams: Promise<{ propertyId?: string; roomId?: string }>;
+}
+
+export default async function NewIncidentPage({ searchParams }: Props) {
+  const { propertyId, roomId } = await searchParams;
   const [properties, rooms] = await Promise.all([
     propertyService.listActive(),
     roomService.list(),
@@ -25,6 +30,8 @@ export default async function NewIncidentPage() {
               propertyId: r.propertyId,
               floor: r.floor ? { name: r.floor.name } : null,
             }))}
+            initialPropertyId={propertyId}
+            initialRoomId={roomId}
           />
         </CardContent>
       </Card>

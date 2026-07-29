@@ -30,9 +30,19 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const initialState: IncidentFormState = {};
 
-export function IncidentForm({ properties, rooms }: { properties: Property[]; rooms: Room[] }) {
+export function IncidentForm({
+  properties,
+  rooms,
+  initialPropertyId,
+  initialRoomId,
+}: {
+  properties: Property[];
+  rooms: Room[];
+  initialPropertyId?: string | undefined;
+  initialRoomId?: string | undefined;
+}) {
   const [state, formAction, isPending] = useActionState(createIncidentAction, initialState);
-  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+  const [selectedPropertyId, setSelectedPropertyId] = useState(initialPropertyId ?? '');
 
   const filteredRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
 
@@ -96,6 +106,7 @@ export function IncidentForm({ properties, rooms }: { properties: Property[]; ro
             <select
               id="roomId"
               name="roomId"
+              defaultValue={initialRoomId ?? ''}
               className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Tidak terkait kamar/unit</option>

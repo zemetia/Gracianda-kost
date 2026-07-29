@@ -1,16 +1,21 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { Fragment, useActionState, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { cn } from '@/lib/cn';
 
 import { createContractAction, type ContractFormState } from './actions';
+import { SearchablePicker } from './SearchablePicker';
 
 interface Tenant {
   id: string;
   fullName: string;
   ktpNumber: string;
+  phone: string;
+  isBlacklisted: boolean;
+  blacklistNote: string | null;
 }
 
 interface Room {
@@ -22,10 +27,43 @@ interface Room {
   prices: { id: string; billingCycle: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'; interval: number; price: number }[];
 }
 
+interface Props {
+  tenants: Tenant[];
+  rooms: Room[];
+  preselectedRoomId?: string | undefined;
+}
+
+type Cycle = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+type Step = 1 | 2 | 3;
+
+const STEPS: { id: Step; label: string }[] = [
+  { id: 1, label: 'Penyewa' },
+  { id: 2, label: 'Kamar & Harga' },
+  { id: 3, label: 'Konfirmasi' },
+];
+
+const CYCLE_UNIT: Record<Cycle, string> = {
+  DAILY: 'Hari',
+  WEEKLY: 'Minggu',
+  MONTHLY: 'Bulan',
+  YEARLY: 'Tahun',
+};
+
 const initialState: ContractFormState = {};
 
 function formatRupiah(value: number): string {
   return `Rp ${value.toLocaleString('id-ID')}`;
+}
+
+function formatDate(value: string): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function todayStr(): string {
+  return new Date().toISOString().split('T')[0] || '';
 }
 
 function calculateEndDate(startDateStr: string, cycle: string, interval: number, duration: number): string {
@@ -42,30 +80,105 @@ function calculateEndDate(startDateStr: string, cycle: string, interval: number,
   } else if (cycle === 'YEARLY') {
     date.setFullYear(date.getFullYear() + (interval * duration));
   }
-  
+
   return date.toISOString().split('T')[0] || '';
 }
 
-export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: Room[] }) {
+export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
   const [state, formAction, isPending] = useActionState(createContractAction, initialState);
+
+  const [step, setStep] = useState<Step>(1);
+  const [maxStepReached, setMaxStepReached] = useState<Step>(1);
+
   const [tenantMode, setTenantMode] = useState<'existing' | 'new'>('existing');
-  
-  const [selectedRoomId, setSelectedRoomId] = useState('');
-  const [selectedCycleIdx, setSelectedCycleIdx] = useState<number | 'custom' | ''>('');
-  const [customCycle, setCustomCycle] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [blacklistAcknowledged, setBlacklistAcknowledged] = useState(false);
+
+  // Controlled so a KTP number can be checked against existing tenants while
+  // typing, and so the confirmation step can show what was entered.
+  const [newFullName, setNewFullName] = useState('');
+  const [newKtpNumber, setNewKtpNumber] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+
+  // Arriving from the room detail page's "Buat Kontrak" quick action — the
+  // room is already decided, so seed it as initial state instead of
+  // retyping it (and instead of a setState-in-effect on mount).
+  const preselectedRoom = preselectedRoomId ? rooms.find((room) => room.id === preselectedRoomId) : undefined;
+
+  const [selectedRoomId, setSelectedRoomId] = useState(preselectedRoom?.id ?? '');
+  const [selectedCycleIdx, setSelectedCycleIdx] = useState<number | 'custom' | ''>(
+    preselectedRoom?.prices?.length ? 0 : '',
+  );
+  const [customCycle, setCustomCycle] = useState<Cycle>('MONTHLY');
   const [customInterval, setCustomInterval] = useState(1);
   const [duration, setDuration] = useState(1);
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0] || '');
-  const [endDate, setEndDate] = useState('');
-  const [rentPrice, setRentPrice] = useState(0);
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(() =>
+    preselectedRoom
+      ? calculateEndDate(
+          todayStr(),
+          preselectedRoom.prices?.[0]?.billingCycle ?? 'MONTHLY',
+          preselectedRoom.prices?.[0]?.interval ?? 1,
+          1,
+        )
+      : '',
+  );
+  const [rentPrice, setRentPrice] = useState(
+    preselectedRoom ? preselectedRoom.prices?.[0]?.price ?? preselectedRoom.price : 0,
+  );
+  const [deposit, setDeposit] = useState<number | ''>('');
+  const [occupantNames, setOccupantNames] = useState('');
+  const [notes, setNotes] = useState('');
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId);
+  const selectedTenant = tenants.find((tenant) => tenant.id === selectedTenantId);
+
+  // Blacklist is a warning with a confirmation, never a hard block: "masalahnya
+  // sudah selesai" is a real case, but it must be a deliberate choice.
+  const blacklistBlocked =
+    tenantMode === 'existing' && !!selectedTenant?.isBlacklisted && !blacklistAcknowledged;
+
+  const duplicateTenant =
+    tenantMode === 'new' && newKtpNumber.trim()
+      ? tenants.find((tenant) => tenant.ktpNumber.trim() === newKtpNumber.trim())
+      : undefined;
+
+  const step1Valid =
+    tenantMode === 'existing'
+      ? !!selectedTenantId && !blacklistBlocked
+      : !!newFullName.trim() && !!newKtpNumber.trim() && !!newPhone.trim();
+
+  const step2Valid = !!selectedRoomId && rentPrice > 0 && !!startDate;
+
+  const submitDisabled = !step1Valid || !step2Valid;
+
+  const activeCycle: Cycle =
+    selectedCycleIdx === 'custom'
+      ? customCycle
+      : selectedRoom?.prices?.[selectedCycleIdx as number]?.billingCycle || 'MONTHLY';
+  const activeInterval =
+    selectedCycleIdx === 'custom'
+      ? customInterval
+      : selectedRoom?.prices?.[selectedCycleIdx as number]?.interval || 1;
+
+  const tenantOptions = tenants.map((tenant) => ({
+    value: tenant.id,
+    label: tenant.fullName,
+    hint: `KTP ${tenant.ktpNumber} · ${tenant.phone}`,
+    ...(tenant.isBlacklisted ? { flag: 'Blacklist' } : {}),
+  }));
+
+  const roomOptions = rooms.map((room) => ({
+    value: room.id,
+    label: `${room.property.name} — No. ${room.number}${room.floor ? ` (${room.floor.name})` : ''}`,
+    hint: formatRupiah(room.prices?.[0]?.price ?? room.price),
+  }));
 
   const calculateAndSetEndDate = (
     sDate: string,
     cIdx: number | 'custom' | '',
     dur: number,
-    cCycle: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+    cCycle: Cycle,
     cInterval: number
   ) => {
     if (cIdx === '') {
@@ -127,7 +240,7 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
     calculateAndSetEndDate(startDate, selectedCycleIdx, val, customCycle, customInterval);
   };
 
-  const handleCustomCycleChange = (val: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY') => {
+  const handleCustomCycleChange = (val: Cycle) => {
     setCustomCycle(val);
     calculateAndSetEndDate(startDate, selectedCycleIdx, duration, val, customInterval);
   };
@@ -137,9 +250,53 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
     calculateAndSetEndDate(startDate, selectedCycleIdx, duration, customCycle, val);
   };
 
+  const goToStep = (target: Step) => {
+    if (target <= maxStepReached) setStep(target);
+  };
+
+  const goNext = () => {
+    if (step === 1 && !step1Valid) return;
+    if (step === 2 && !step2Valid) return;
+    const next = (step + 1) as Step;
+    setStep(next);
+    setMaxStepReached((current) => (next > current ? next : current));
+  };
+
+  const goBack = () => {
+    setStep((current) => (current > 1 ? ((current - 1) as Step) : current));
+  };
+
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <fieldset>
+      {/* Stepper */}
+      <div className="flex items-center gap-2">
+        {STEPS.map((s, idx) => (
+          <Fragment key={s.id}>
+            <button
+              type="button"
+              onClick={() => goToStep(s.id)}
+              disabled={s.id > maxStepReached}
+              className={cn(
+                'flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                step === s.id
+                  ? 'bg-primary text-primary-foreground'
+                  : s.id <= maxStepReached
+                  ? 'bg-primary-subtle text-primary hover:bg-primary/20 cursor-pointer'
+                  : 'bg-surface-raised text-foreground-subtle cursor-not-allowed',
+              )}
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-background/30 text-[11px]">
+                {s.id}
+              </span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </button>
+            {idx < STEPS.length - 1 && <div className="h-px flex-1 bg-border" aria-hidden="true" />}
+          </Fragment>
+        ))}
+      </div>
+
+      {/* Step 1 — Penyewa */}
+      <fieldset hidden={step !== 1}>
         <legend className="mb-2 text-sm font-medium text-foreground">Penyewa</legend>
         <div className="mb-3 flex gap-4 text-sm">
           <label className="flex items-center gap-2">
@@ -165,66 +322,117 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
         </div>
 
         {tenantMode === 'existing' ? (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="tenantId" className="text-sm font-medium text-foreground">
-              Pilih Penyewa
-            </label>
-            <select
-              id="tenantId"
+          <div className="flex flex-col gap-3">
+            <SearchablePicker
+              id="tenantPicker"
               name="tenantId"
-              required={tenantMode === 'existing'}
-              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Pilih penyewa</option>
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.fullName} — {tenant.ktpNumber}
-                </option>
-              ))}
-            </select>
-            {state.fieldErrors?.tenantId && (
-              <p className="text-xs text-destructive">{state.fieldErrors.tenantId[0]}</p>
+              label="Pilih Penyewa"
+              placeholder="Ketik nama, KTP, atau nomor HP"
+              options={tenantOptions}
+              value={selectedTenantId}
+              onChange={(next) => {
+                setSelectedTenantId(next);
+                setBlacklistAcknowledged(false);
+              }}
+              required
+              error={state.fieldErrors?.tenantId?.[0]}
+              emptyText="Penyewa tidak ditemukan — pilih 'Penyewa baru' di atas."
+            />
+
+            {selectedTenant?.isBlacklisted && (
+              <div className="flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive-subtle p-3">
+                <p className="text-sm font-semibold text-destructive">
+                  {selectedTenant.fullName} ada di daftar blacklist.
+                </p>
+                {selectedTenant.blacklistNote && (
+                  <p className="text-xs text-foreground-muted">{selectedTenant.blacklistNote}</p>
+                )}
+                <label className="flex items-center gap-2 text-xs font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={blacklistAcknowledged}
+                    onChange={(event) => setBlacklistAcknowledged(event.target.checked)}
+                  />
+                  Saya sudah memeriksa dan tetap melanjutkan kontrak ini.
+                </label>
+              </div>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Nama Lengkap" name="fullName" required error={state.fieldErrors?.fullName?.[0]} />
-            <Input label="Nomor KTP" name="ktpNumber" required error={state.fieldErrors?.ktpNumber?.[0]} />
-            <Input label="Nomor HP" name="phone" required error={state.fieldErrors?.phone?.[0]} />
-            <Input label="Email" name="email" type="email" error={state.fieldErrors?.email?.[0]} />
-            <Input label="Pekerjaan" name="occupation" error={state.fieldErrors?.occupation?.[0]} />
-            <Input label="Jenis Kendaraan" name="vehicleType" placeholder="Motor Honda Beat" />
-            <Input label="Plat Nomor" name="vehiclePlate" />
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Nama Lengkap"
+                name="fullName"
+                required
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+                error={state.fieldErrors?.fullName?.[0]}
+              />
+              <Input
+                label="Nomor KTP"
+                name="ktpNumber"
+                required
+                value={newKtpNumber}
+                onChange={(e) => setNewKtpNumber(e.target.value)}
+                error={state.fieldErrors?.ktpNumber?.[0]}
+              />
+              <Input
+                label="Nomor HP"
+                name="phone"
+                required
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                error={state.fieldErrors?.phone?.[0]}
+              />
+              <Input label="Email" name="email" type="email" error={state.fieldErrors?.email?.[0]} />
+              <Input label="Pekerjaan" name="occupation" error={state.fieldErrors?.occupation?.[0]} />
+              <Input label="Jenis Kendaraan" name="vehicleType" placeholder="Motor Honda Beat" />
+              <Input label="Plat Nomor" name="vehiclePlate" />
+            </div>
+
+            {duplicateTenant && (
+              <div className="flex flex-col gap-2 rounded-md border border-warning/30 bg-warning-subtle p-3">
+                <p className="text-sm font-semibold text-warning">
+                  Nomor KTP ini sudah terdaftar sebagai {duplicateTenant.fullName}.
+                </p>
+                <p className="text-xs text-foreground-muted">
+                  Gunakan data penyewa lama supaya riwayat sewa tetap tercatat di satu profil.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="self-start"
+                  onClick={() => {
+                    setTenantMode('existing');
+                    setSelectedTenantId(duplicateTenant.id);
+                  }}
+                >
+                  Gunakan Penyewa Ini
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </fieldset>
 
-      <fieldset>
+      {/* Step 2 — Kamar & Harga */}
+      <fieldset hidden={step !== 2}>
         <legend className="mb-2 text-sm font-medium text-foreground">Kontrak</legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="roomId" className="text-sm font-medium text-foreground">
-              Kamar / Unit <span className="text-destructive">*</span>
-            </label>
-            <select
-              id="roomId"
-              name="roomId"
-              required
-              value={selectedRoomId}
-              onChange={(e) => handleRoomChange(e.target.value)}
-              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Pilih unit tersedia</option>
-              {rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.property.name} — No. {room.number} {room.floor ? `(${room.floor.name})` : ''}
-                </option>
-              ))}
-            </select>
-            {state.fieldErrors?.roomId && (
-              <p className="text-xs text-destructive">{state.fieldErrors.roomId[0]}</p>
-            )}
-          </div>
+          <SearchablePicker
+            id="roomPicker"
+            name="roomId"
+            label="Kamar / Unit"
+            placeholder="Ketik nomor kamar atau lantai"
+            options={roomOptions}
+            value={selectedRoomId}
+            onChange={handleRoomChange}
+            required
+            error={state.fieldErrors?.roomId?.[0]}
+            emptyText="Tidak ada unit kosong yang cocok."
+          />
 
           {selectedRoom && (
             <div className="flex flex-col gap-1.5">
@@ -242,8 +450,8 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
                   if (p.billingCycle === 'DAILY') text = `Harian (${formatRupiah(p.price)} / hari)`;
                   else if (p.billingCycle === 'WEEKLY') text = `Mingguan (${formatRupiah(p.price)} / minggu)`;
                   else if (p.billingCycle === 'MONTHLY') {
-                    text = p.interval === 1 
-                      ? `Bulanan (${formatRupiah(p.price)} / bulan)` 
+                    text = p.interval === 1
+                      ? `Bulanan (${formatRupiah(p.price)} / bulan)`
                       : `${p.interval} Bulanan (${formatRupiah(p.price)} / ${p.interval} bulan)`;
                   } else if (p.billingCycle === 'YEARLY') {
                     text = `Tahunan (${formatRupiah(p.price)} / tahun)`;
@@ -268,7 +476,7 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
                 <select
                   id="customCycle"
                   value={customCycle}
-                  onChange={(e) => handleCustomCycleChange(e.target.value as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY')}
+                  onChange={(e) => handleCustomCycleChange(e.target.value as Cycle)}
                   className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="DAILY">Hari</option>
@@ -291,22 +499,10 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
             <Input
               label={`Durasi Sewa (${
                 selectedCycleIdx === 'custom'
-                  ? customCycle === 'DAILY'
-                    ? 'Hari'
-                    : customCycle === 'WEEKLY'
-                    ? 'Minggu'
-                    : customCycle === 'MONTHLY'
-                    ? 'Bulan'
-                    : 'Tahun'
-                  : selectedRoom.prices?.[selectedCycleIdx as number]?.billingCycle === 'DAILY'
-                  ? 'Hari'
-                  : selectedRoom.prices?.[selectedCycleIdx as number]?.billingCycle === 'WEEKLY'
-                  ? 'Minggu'
+                  ? CYCLE_UNIT[customCycle]
                   : selectedRoom.prices?.[selectedCycleIdx as number]?.billingCycle === 'MONTHLY'
                   ? 'Kali Siklus'
-                  : selectedRoom.prices?.[selectedCycleIdx as number]?.billingCycle === 'YEARLY'
-                  ? 'Tahun'
-                  : 'Kali'
+                  : CYCLE_UNIT[selectedRoom.prices?.[selectedCycleIdx as number]?.billingCycle ?? 'MONTHLY']
               })`}
               type="number"
               min={1}
@@ -315,24 +511,8 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
             />
           )}
 
-          <input
-            type="hidden"
-            name="billingCycle"
-            value={
-              selectedCycleIdx === 'custom'
-                ? customCycle
-                : selectedRoom?.prices?.[selectedCycleIdx as number]?.billingCycle || 'MONTHLY'
-            }
-          />
-          <input
-            type="hidden"
-            name="billingInterval"
-            value={
-              selectedCycleIdx === 'custom'
-                ? customInterval
-                : selectedRoom?.prices?.[selectedCycleIdx as number]?.interval || 1
-            }
-          />
+          <input type="hidden" name="billingCycle" value={activeCycle} />
+          <input type="hidden" name="billingInterval" value={activeInterval} />
 
           <Input
             label="Harga Sewa"
@@ -345,21 +525,29 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
             onChange={(e) => setRentPrice(Number(e.target.value))}
             error={state.fieldErrors?.rentPrice?.[0]}
           />
-          
-          <Input label="Deposit" name="deposit" type="number" min={0} step="1000" />
-          <Input 
-            label="Tanggal Masuk" 
-            name="startDate" 
-            type="date" 
-            required 
-            value={startDate} 
-            onChange={(e) => handleStartDateChange(e.target.value)}
-            error={state.fieldErrors?.startDate?.[0]} 
+
+          <Input
+            label="Deposit"
+            name="deposit"
+            type="number"
+            min={0}
+            step="1000"
+            value={deposit}
+            onChange={(e) => setDeposit(e.target.value === '' ? '' : Number(e.target.value))}
           />
-          <Input 
-            label="Tanggal Keluar (Kalkulasi Otomatis)" 
-            name="endDate" 
-            type="date" 
+          <Input
+            label="Tanggal Masuk"
+            name="startDate"
+            type="date"
+            required
+            value={startDate}
+            onChange={(e) => handleStartDateChange(e.target.value)}
+            error={state.fieldErrors?.startDate?.[0]}
+          />
+          <Input
+            label="Tanggal Keluar (Kalkulasi Otomatis)"
+            name="endDate"
+            type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
@@ -369,7 +557,13 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
           <label htmlFor="occupantNames" className="text-sm font-medium text-foreground">
             Penghuni Tambahan
           </label>
-          <Input id="occupantNames" name="occupantNames" placeholder="Pisahkan dengan koma, mis: Budi, Ani" />
+          <Input
+            id="occupantNames"
+            name="occupantNames"
+            placeholder="Pisahkan dengan koma, mis: Budi, Ani"
+            value={occupantNames}
+            onChange={(e) => setOccupantNames(e.target.value)}
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-1.5">
@@ -380,10 +574,72 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
             id="notes"
             name="notes"
             rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             className="rounded-md border border-input bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
       </fieldset>
+
+      {/* Step 3 — Konfirmasi */}
+      <div hidden={step !== 3} className="flex flex-col gap-4">
+        <div className="rounded-lg border border-border bg-surface-raised p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Penyewa</p>
+          {tenantMode === 'existing' && selectedTenant ? (
+            <>
+              <p className="mt-1 text-sm font-semibold text-foreground">{selectedTenant.fullName}</p>
+              <p className="text-xs text-foreground-muted">
+                KTP {selectedTenant.ktpNumber} · {selectedTenant.phone}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-sm font-semibold text-foreground">{newFullName || '—'} (Penyewa Baru)</p>
+              <p className="text-xs text-foreground-muted">
+                KTP {newKtpNumber || '—'} · {newPhone || '—'}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface-raised p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Kamar & Sewa</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">
+            {selectedRoom
+              ? `${selectedRoom.property.name} — No. ${selectedRoom.number}${selectedRoom.floor ? ` (${selectedRoom.floor.name})` : ''}`
+              : '—'}
+          </p>
+          <p className="text-xs text-foreground-muted">
+            {formatRupiah(rentPrice)} /{' '}
+            {activeInterval === 1 ? CYCLE_UNIT[activeCycle] : `${activeInterval} ${CYCLE_UNIT[activeCycle]}`}
+            {' · '}
+            {formatDate(startDate)} – {endDate ? formatDate(endDate) : '—'}
+          </p>
+          {deposit !== '' && Number(deposit) > 0 && (
+            <p className="text-xs text-foreground-muted">Deposit {formatRupiah(Number(deposit))}</p>
+          )}
+        </div>
+
+        {occupantNames.trim() && (
+          <div className="rounded-lg border border-border bg-surface-raised p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+              Penghuni Tambahan
+            </p>
+            <p className="mt-1 text-sm text-foreground">{occupantNames}</p>
+          </div>
+        )}
+
+        {notes.trim() && (
+          <div className="rounded-lg border border-border bg-surface-raised p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">Catatan</p>
+            <p className="mt-1 text-sm text-foreground">{notes}</p>
+          </div>
+        )}
+
+        <p className="text-xs text-foreground-subtle">
+          Tagihan pertama untuk periode berjalan akan diterbitkan otomatis begitu kontrak ini dibuat.
+        </p>
+      </div>
 
       {state.error && (
         <p role="alert" className="text-sm text-destructive">
@@ -391,9 +647,29 @@ export function NewContractForm({ tenants, rooms }: { tenants: Tenant[]; rooms: 
         </p>
       )}
 
-      <Button type="submit" isLoading={isPending} className="self-start">
-        Buat Kontrak
-      </Button>
+      {step === 1 && blacklistBlocked && (
+        <p className="text-sm text-destructive">Centang konfirmasi blacklist di atas untuk melanjutkan.</p>
+      )}
+
+      <div className="flex items-center justify-between">
+        {step > 1 ? (
+          <Button type="button" variant="outline" onClick={goBack}>
+            Kembali
+          </Button>
+        ) : (
+          <span />
+        )}
+
+        {step < 3 ? (
+          <Button type="button" onClick={goNext} disabled={step === 1 ? !step1Valid : !step2Valid}>
+            Lanjut
+          </Button>
+        ) : (
+          <Button type="submit" isLoading={isPending} disabled={submitDisabled}>
+            Buat Kontrak & Tagihan Pertama
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
+import { addCycles, firstPeriod, periodsInRange } from '@/lib/billing';
+
 // Pure date calculation logic copied from NewContractForm for verification
 function calculateEndDate(startDateStr: string, cycle: string, interval: number, duration: number): string {
   if (!startDateStr) return '';
@@ -15,39 +17,11 @@ function calculateEndDate(startDateStr: string, cycle: string, interval: number,
   } else if (cycle === 'YEARLY') {
     date.setFullYear(date.getFullYear() + (interval * duration));
   }
-  
+
   return date.toISOString().split('T')[0] || '';
 }
 
-// Logic extracted from paymentService.generateMonthlyInvoices for testing pure functionality
-function shouldBillContract(contract: {
-  billingCycle: string;
-  billingInterval: number;
-  startDate: Date;
-  endDate?: Date | null;
-}, periodMonth: number, periodYear: number): boolean {
-  if (contract.billingCycle === 'DAILY' || contract.billingCycle === 'WEEKLY') {
-    return false;
-  }
-
-  const start = contract.startDate;
-  const yDiff = periodYear - start.getFullYear();
-  const mDiff = periodMonth - (start.getMonth() + 1);
-  const monthsDiff = yDiff * 12 + mDiff;
-
-  if (monthsDiff < 0) return false;
-
-  if (contract.endDate) {
-    const targetDate = new Date(periodYear, periodMonth - 1, 1);
-    if (targetDate > contract.endDate) return false;
-  }
-
-  const intervalInMonths = contract.billingCycle === 'YEARLY'
-    ? contract.billingInterval * 12
-    : contract.billingInterval;
-
-  return monthsDiff % intervalInMonths === 0;
-}
+const july = (day: number) => new Date(2026, 6, day);
 
 describe('Billing Cycles Calculations', () => {
   describe('calculateEndDate', () => {
@@ -69,42 +43,75 @@ describe('Billing Cycles Calculations', () => {
     });
   });
 
-  describe('shouldBillContract (generateMonthlyInvoices logic)', () => {
-    it('should exclude DAILY and WEEKLY cycles', () => {
-      const daily = { billingCycle: 'DAILY', billingInterval: 1, startDate: new Date('2026-07-01') };
-      const weekly = { billingCycle: 'WEEKLY', billingInterval: 1, startDate: new Date('2026-07-01') };
-      
-      expect(shouldBillContract(daily, 7, 2026)).toBe(false);
-      expect(shouldBillContract(weekly, 7, 2026)).toBe(false);
+  describe('addCycles', () => {
+    it('advances by days, weeks, months and years', () => {
+      expect(addCycles(july(1), 'DAILY', 1)).toEqual(july(2));
+      expect(addCycles(july(1), 'WEEKLY', 1)).toEqual(july(8));
+      expect(addCycles(july(1), 'MONTHLY', 3)).toEqual(new Date(2026, 9, 1));
+      expect(addCycles(july(1), 'YEARLY', 1)).toEqual(new Date(2027, 6, 1));
     });
 
-    it('should bill standard monthly cycle every month', () => {
-      const monthly = { billingCycle: 'MONTHLY', billingInterval: 1, startDate: new Date('2026-07-15') };
-      
-      expect(shouldBillContract(monthly, 7, 2026)).toBe(true); // Month 0
-      expect(shouldBillContract(monthly, 8, 2026)).toBe(true); // Month 1
-      expect(shouldBillContract(monthly, 9, 2026)).toBe(true); // Month 2
+    it('clamps month-end instead of overflowing into the next month', () => {
+      // 31 Jan + 1 month must be 28 Feb, not 3 Mar.
+      expect(addCycles(new Date(2026, 0, 31), 'MONTHLY', 1)).toEqual(new Date(2026, 1, 28));
+    });
+  });
+
+  describe('firstPeriod', () => {
+    it('spans exactly one billing cycle from the start date', () => {
+      const period = firstPeriod({
+        billingCycle: 'MONTHLY',
+        billingInterval: 1,
+        startDate: july(17),
+      });
+      expect(period.start).toEqual(july(17));
+      expect(period.end).toEqual(new Date(2026, 7, 17));
+    });
+  });
+
+  describe('periodsInRange', () => {
+    const augustRange = { start: new Date(2026, 7, 1), end: new Date(2026, 8, 1) };
+
+    it('bills a monthly contract once per month, on its own anniversary day', () => {
+      const periods = periodsInRange(
+        { billingCycle: 'MONTHLY', billingInterval: 1, startDate: july(15) },
+        augustRange.start,
+        augustRange.end,
+      );
+      expect(periods).toHaveLength(1);
+      expect(periods[0]?.start).toEqual(new Date(2026, 7, 15));
     });
 
-    it('should bill quarterly (3-monthly) cycle only every 3 months', () => {
-      const quarterly = { billingCycle: 'MONTHLY', billingInterval: 3, startDate: new Date('2026-07-15') };
-      
-      expect(shouldBillContract(quarterly, 7, 2026)).toBe(true);  // Month 0
-      expect(shouldBillContract(quarterly, 8, 2026)).toBe(false); // Month 1
-      expect(shouldBillContract(quarterly, 9, 2026)).toBe(false); // Month 2
-      expect(shouldBillContract(quarterly, 10, 2026)).toBe(true); // Month 3 (Quarterly due!)
+    it('bills a quarterly contract only on its due month', () => {
+      const quarterly = { billingCycle: 'MONTHLY', billingInterval: 3, startDate: july(15) };
+
+      expect(periodsInRange(quarterly, augustRange.start, augustRange.end)).toHaveLength(0);
+      expect(
+        periodsInRange(quarterly, new Date(2026, 9, 1), new Date(2026, 10, 1)),
+      ).toHaveLength(1);
     });
 
-    it('should respect contract endDate', () => {
-      const monthlyWithEnd = { 
-        billingCycle: 'MONTHLY', 
-        billingInterval: 1, 
-        startDate: new Date('2026-07-01'),
-        endDate: new Date('2026-09-01')
+    it('produces many periods per month for daily and weekly contracts', () => {
+      const julyRange = { start: july(1), end: new Date(2026, 7, 1) };
+
+      expect(
+        periodsInRange({ billingCycle: 'DAILY', billingInterval: 1, startDate: july(1) }, julyRange.start, julyRange.end),
+      ).toHaveLength(31);
+      expect(
+        periodsInRange({ billingCycle: 'WEEKLY', billingInterval: 1, startDate: july(1) }, julyRange.start, julyRange.end),
+      ).toHaveLength(5);
+    });
+
+    it('stops billing once the contract end date is reached', () => {
+      const ending = {
+        billingCycle: 'MONTHLY',
+        billingInterval: 1,
+        startDate: july(1),
+        endDate: new Date(2026, 8, 1),
       };
-      
-      expect(shouldBillContract(monthlyWithEnd, 8, 2026)).toBe(true);  // August is within range
-      expect(shouldBillContract(monthlyWithEnd, 10, 2026)).toBe(false); // October is after endDate
+
+      expect(periodsInRange(ending, augustRange.start, augustRange.end)).toHaveLength(1);
+      expect(periodsInRange(ending, new Date(2026, 8, 1), new Date(2026, 9, 1))).toHaveLength(0);
     });
   });
 });

@@ -30,6 +30,49 @@ const MONTH_NAMES_ID = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ];
 
+interface ContractCreatedTenant {
+  fullName: string;
+}
+
+interface ContractCreatedContract {
+  contractCode: string;
+  room: { number: string };
+  rentPrice: number;
+  billingCycle: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  billingInterval: number;
+  startDate: Date;
+}
+
+const CYCLE_UNIT_ID: Record<ContractCreatedContract['billingCycle'], string> = {
+  DAILY: 'hari',
+  WEEKLY: 'minggu',
+  MONTHLY: 'bulan',
+  YEARLY: 'tahun',
+};
+
+/** Pure function — the "kontrak baru dibuat" confirmation sent manually by an admin right after signup. */
+export function buildContractCreatedMessage(
+  tenant: ContractCreatedTenant,
+  contract: ContractCreatedContract,
+): string {
+  const startDate = contract.startDate.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const unit = CYCLE_UNIT_ID[contract.billingCycle];
+  const cycleText = contract.billingInterval === 1 ? `per ${unit}` : `per ${contract.billingInterval} ${unit}`;
+
+  return (
+    `Halo ${tenant.fullName}, kontrak sewa Anda sudah kami buat.\n` +
+    `Kode Kontrak: ${contract.contractCode}\n` +
+    `Kamar: ${contract.room.number}\n` +
+    `Harga Sewa: Rp ${contract.rentPrice.toLocaleString('id-ID')} ${cycleText}\n` +
+    `Mulai: ${startDate}\n\n` +
+    `Tagihan pertama sudah kami terbitkan. Terima kasih telah bergabung di Gracianda House!`
+  );
+}
+
 /** Pure function — builds the reminder text sent manually by an admin, never sent server-side. */
 export function buildReminderMessage(
   tenant: ReminderTenant,

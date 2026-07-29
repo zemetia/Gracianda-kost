@@ -4,12 +4,18 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
+import { getPropertyScope } from '@/lib/property-scope';
 import { incidentService } from '@/services/incident.service';
 import { roomService } from '@/services/room.service';
 import type { IncidentCategory, IncidentStatus } from '@prisma/client';
 
 interface Props {
-  searchParams: Promise<{ category?: string; status?: string; floorId?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    status?: string;
+    floorId?: string;
+    propertyId?: string;
+  }>;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -34,14 +40,16 @@ const STATUS_VARIANT: Record<string, 'destructive' | 'warning' | 'success'> = {
 };
 
 export default async function IncidentsPage({ searchParams }: Props) {
-  const { category, status, floorId } = await searchParams;
+  const { category, status, floorId, propertyId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
   const [incidents, floors, session] = await Promise.all([
     incidentService.list({
       category: category as IncidentCategory | undefined,
       status: status as IncidentStatus | undefined,
+      propertyId: scopedPropertyId,
       floorId: floorId || undefined,
     }),
-    roomService.listFloors(),
+    roomService.listFloors(scopedPropertyId),
     getSession(),
   ]);
   const canCreate = session && ['SUPER_ADMIN', 'SECURITY', 'OPERASIONAL'].includes(session.user.role);

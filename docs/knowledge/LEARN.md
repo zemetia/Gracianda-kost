@@ -8,6 +8,8 @@
 
 <!-- Entries below, newest first -->
 
+[2026-07-28] - Rekomendasi flow admin disusun dari isi file yang ternyata basi (payment.service, dashboard.service, schema Prisma sudah jauh lebih maju di disk karena ada sesi agent lain menulis paralel) — separuh "friksi" yang dilaporkan sebenarnya sudah dikerjakan - Verifikasi ulang dengan Grep + `Get-ChildItem | Sort LastWriteTime` sebelum menyimpulkan, lalu lanjutkan hanya bagian yang benar-benar kurang - Sebelum mendiagnosis kondisi kode, cek mtime file dan konfirmasi isinya lewat Grep; di repo yang sedang disentuh proses lain, hasil baca bisa tertinggal dari disk
+
 [2026-07-27] - Import 'buildRoomInquiryMessage' di RoomFloorPlan.tsx tidak digunakan dan memicu kegagalan type-check compiler strict - Hapus import yang tidak terpakai dan bersihkan kode - Selalu bersihkan import yang tidak terpakai agar tsc --noEmit keluar dengan exit code 0
 
 [2026-07-27] - `requireRole()` dipakai langsung di page/layout admin, padahal fungsi itu `throw new Error('Forbidden')` — role yang tidak berhak dapat error boundary (500), bukan 403; dan di production `error.message` diredaksi jadi tidak bisa dibedakan dari crash biasa - Tambah `canAccess()` (non-throwing) di `src/lib/auth.ts` + komponen `<Forbidden />`; page/layout pakai `canAccess`, Server Action tetap pakai `requireRole` - Guard di UI dan guard di mutasi punya kebutuhan berbeda: UI harus merender penolakan, mutasi harus gagal keras

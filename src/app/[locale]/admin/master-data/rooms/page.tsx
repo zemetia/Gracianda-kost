@@ -3,31 +3,51 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { getPropertyScope } from '@/lib/property-scope';
 import { roomService } from '@/services/room.service';
 import { propertyService } from '@/services/property.service';
 
 import { deactivateRoomAction } from './actions';
 import { NewFloorForm } from './NewFloorForm';
 
+type Occupancy = 'all' | 'occupied' | 'available';
+
+const OCCUPANCY_TABS: { value: Occupancy; label: string }[] = [
+  { value: 'all', label: 'Semua' },
+  { value: 'occupied', label: 'Terisi' },
+  { value: 'available', label: 'Tersedia' },
+];
+
 interface Props {
-  searchParams: Promise<{ propertyId?: string }>;
+  searchParams: Promise<{ propertyId?: string; occupancy?: string }>;
 }
 
 export default async function RoomsPage({ searchParams }: Props) {
-  const { propertyId } = await searchParams;
+  const { propertyId, occupancy } = await searchParams;
   const activeProperties = await propertyService.listActive();
 
-  let selectedPropertyId = propertyId;
+  // Rooms are always viewed one property at a time (floors and denah only make
+  // sense per building), so the global scope picks the property and the tabs
+  // below stay as the explicit override.
+  let selectedPropertyId = await getPropertyScope(propertyId);
   if (!selectedPropertyId && activeProperties.length > 0) {
     selectedPropertyId = activeProperties[0]?.id;
   }
 
   const selectedProperty = activeProperties.find((p) => p.id === selectedPropertyId);
+  const selectedOccupancy: Occupancy =
+    occupancy === 'occupied' || occupancy === 'available' ? occupancy : 'all';
 
-  const [rooms, floors] = await Promise.all([
+  const [allRooms, floors] = await Promise.all([
     selectedPropertyId ? roomService.list(selectedPropertyId) : Promise.resolve([]),
     selectedPropertyId ? roomService.listFloors(selectedPropertyId) : Promise.resolve([]),
   ]);
+
+  const rooms = allRooms.filter((room) => {
+    if (selectedOccupancy === 'all') return true;
+    const isOccupied = room.contracts.length > 0;
+    return selectedOccupancy === 'occupied' ? isOccupied : !isOccupied;
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,6 +89,33 @@ export default async function RoomsPage({ searchParams }: Props) {
 
       {selectedPropertyId && selectedProperty && (
         <>
+          {/* Occupancy filter — the target of the dashboard's "Unit Terisi/Kosong" tiles */}
+          <div className="flex flex-wrap gap-2">
+            {OCCUPANCY_TABS.map((tab) => (
+              <Link
+                key={tab.value}
+                href={`/admin/master-data/rooms?propertyId=${selectedPropertyId}${
+                  tab.value === 'all' ? '' : `&occupancy=${tab.value}`
+                }`}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  selectedOccupancy === tab.value
+                    ? 'border-primary bg-primary-subtle text-primary'
+                    : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground'
+                }`}
+              >
+                {tab.label} (
+                {tab.value === 'all'
+                  ? allRooms.length
+                  : allRooms.filter((room) =>
+                      tab.value === 'occupied'
+                        ? room.contracts.length > 0
+                        : room.contracts.length === 0,
+                    ).length}
+                )
+              </Link>
+            ))}
+          </div>
+
           {/* Floor Management Card (Only relevant for properties using floors e.g., KOST/APARTMENT) */}
           {(selectedProperty.type === 'KOST' || selectedProperty.type === 'APARTMENT') && (
             <Card>
@@ -145,7 +192,9 @@ export default async function RoomsPage({ searchParams }: Props) {
                 {rooms.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-foreground-subtle">
-                      Belum ada kamar atau unit hunian terdaftar.
+                      {selectedOccupancy === 'all'
+                        ? 'Belum ada kamar atau unit hunian terdaftar.'
+                        : 'Tidak ada unit pada filter ini.'}
                     </td>
                   </tr>
                 )}

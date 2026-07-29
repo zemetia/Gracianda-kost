@@ -15,43 +15,55 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Typography } from '@/components/ui/Typography';
 import { getSession } from '@/lib/auth';
 import { cn } from '@/lib/cn';
+import { getPropertyScope } from '@/lib/property-scope';
 import { dashboardService } from '@/services/dashboard.service';
-import { propertyService } from '@/services/property.service';
 import { Link } from '@/i18n/navigation';
 
+import { ActionQueue } from './ActionQueue';
 import { RevenueChart } from './RevenueChart';
 
+// These mirror the layout guards of the pages each widget links to
+// (contracts/layout.tsx, master-data/layout.tsx, …) — a tile that leads to
+// <Forbidden /> is a broken promise, not a permission check.
 const CAN_SEE_FINANCE = ['SUPER_ADMIN', 'KEUANGAN'];
 const CAN_SEE_MAINTENANCE = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
 const CAN_SEE_INCIDENTS = ['SUPER_ADMIN', 'SECURITY', 'OPERASIONAL'];
+const CAN_SEE_ROOMS = ['SUPER_ADMIN', 'OPERASIONAL'];
+const CAN_SEE_CONTRACTS = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
 
+// Every number on this dashboard is a question ("which ones?"), so every tile
+// links to the list that answers it.
 function StatTile({
   label,
   value,
   icon: Icon,
+  href,
   colorClass = 'text-primary bg-primary-subtle',
 }: {
   label: string;
   value: string;
   icon: LucideIcon;
+  href: string;
   colorClass?: string;
 }) {
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all duration-200 border-border/80 hover:border-primary/30">
-      <CardContent className="flex items-center justify-between p-6">
-        <div className="flex flex-col gap-1.5 min-w-0">
-          <Typography variant="muted" className="text-xs uppercase tracking-wider font-semibold truncate">
-            {label}
-          </Typography>
-          <Typography variant="h3" className="font-bold text-foreground truncate">
-            {value}
-          </Typography>
-        </div>
-        <div className={cn('p-3 rounded-xl shrink-0', colorClass)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </CardContent>
-    </Card>
+    <Link href={href} className="group focus-visible:outline-none">
+      <Card className="overflow-hidden hover:shadow-md transition-all duration-200 border-border/80 group-hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring h-full">
+        <CardContent className="flex items-center justify-between p-6">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <Typography variant="muted" className="text-xs uppercase tracking-wider font-semibold truncate">
+              {label}
+            </Typography>
+            <Typography variant="h3" className="font-bold text-foreground truncate">
+              {value}
+            </Typography>
+          </div>
+          <div className={cn('p-3 rounded-xl shrink-0', colorClass)}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -69,18 +81,28 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const showMaintenance = CAN_SEE_MAINTENANCE.includes(role);
   const showIncidents = CAN_SEE_INCIDENTS.includes(role);
 
-  const activeProperties = await propertyService.listActive();
-  const selectedPropertyId = propertyId || undefined;
+  // Scope comes from the global switcher in the admin layout; ?propertyId only
+  // overrides it for deep links.
+  const selectedPropertyId = await getPropertyScope(propertyId);
 
   // Aggregates are cheap enough to fetch unconditionally — only rendering is role-gated.
-  const [roomStats, revenue, overdueCount, maintenance, incidents, revenueTrend] = await Promise.all([
-    dashboardService.getRoomStats(selectedPropertyId),
-    dashboardService.getRevenueThisMonth(selectedPropertyId),
-    dashboardService.getOverdueCount(selectedPropertyId),
-    dashboardService.getMaintenanceThisMonth(selectedPropertyId),
-    dashboardService.getIncidentsThisMonth(selectedPropertyId),
-    dashboardService.getRevenueTrend(6, selectedPropertyId),
-  ]);
+  const [roomStats, revenue, maintenance, incidents, revenueTrend, actionQueue] =
+    await Promise.all([
+      dashboardService.getRoomStats(selectedPropertyId),
+      dashboardService.getRevenueThisMonth(selectedPropertyId),
+      dashboardService.getMaintenanceThisMonth(selectedPropertyId),
+      dashboardService.getIncidentsThisMonth(selectedPropertyId),
+      dashboardService.getRevenueTrend(6, selectedPropertyId),
+      dashboardService.getActionQueue(selectedPropertyId),
+    ]);
+
+  const scope = selectedPropertyId ? `&propertyId=${selectedPropertyId}` : '';
+  const roomScope = selectedPropertyId ? `?propertyId=${selectedPropertyId}` : '';
+
+  const now = new Date();
+  // "Pendapatan Bulan Ini" must open this month's paid invoices — the same
+  // period the number was computed from, not every paid invoice ever.
+  const thisMonthScope = `&month=${now.getMonth() + 1}&year=${now.getFullYear()}`;
 
   const formattedDate = new Date().toLocaleDateString('id-ID', {
     weekday: 'long',
@@ -112,32 +134,16 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {/* Property Selector Tabs */}
-      <div className="flex gap-2 border-b border-border pb-px overflow-x-auto">
-        <Link
-          href="/admin"
-          className={`border-b-2 px-4 py-2 text-sm font-medium transition-all shrink-0 ${
-            !selectedPropertyId
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-foreground-muted hover:text-foreground'
-          }`}
-        >
-          Semua Properti
-        </Link>
-        {activeProperties.map((prop) => (
-          <Link
-            key={prop.id}
-            href={`/admin?propertyId=${prop.id}`}
-            className={`border-b-2 px-4 py-2 text-sm font-medium transition-all shrink-0 ${
-              selectedPropertyId === prop.id
-                ? 'border-primary text-primary font-bold'
-                : 'border-transparent text-foreground-muted hover:text-foreground'
-            }`}
-          >
-            {prop.name}
-          </Link>
-        ))}
-      </div>
+      {/* Work list first, numbers second — the admin opens this page to find out
+          what to do, not to admire totals. */}
+      <ActionQueue
+        queue={actionQueue}
+        propertyId={selectedPropertyId}
+        showFinance={showFinance}
+        showContracts={CAN_SEE_CONTRACTS.includes(role)}
+        showIncidents={showIncidents}
+        showRooms={CAN_SEE_ROOMS.includes(role)}
+      />
 
       {/* Statistics Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -145,18 +151,21 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
           label="Total Unit"
           value={String(roomStats.total)}
           icon={DoorOpen}
+          href={`/admin/master-data/rooms${roomScope}`}
           colorClass="text-primary bg-primary-subtle"
         />
         <StatTile
           label="Unit Terisi"
           value={String(roomStats.occupied)}
           icon={Users}
+          href={`/admin/master-data/rooms?occupancy=occupied${scope}`}
           colorClass="text-success bg-success-subtle"
         />
         <StatTile
           label="Unit Kosong"
           value={String(roomStats.available)}
           icon={Sparkles}
+          href={`/admin/master-data/rooms?occupancy=available${scope}`}
           colorClass="text-warning bg-warning-subtle"
         />
         {showFinance && (
@@ -164,14 +173,16 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
             label="Pendapatan Bulan Ini"
             value={`Rp ${revenue.toLocaleString('id-ID')}`}
             icon={Wallet}
+            href={`/admin/payments?bucket=PAID${thisMonthScope}${scope}`}
             colorClass="text-success bg-success-subtle"
           />
         )}
         {showFinance && (
           <StatTile
             label="Pembayaran Terlambat"
-            value={String(overdueCount)}
+            value={String(actionQueue.overdue.count)}
             icon={ShieldAlert}
+            href={`/admin/payments?bucket=OVERDUE${scope}`}
             colorClass="text-destructive bg-destructive-subtle"
           />
         )}
@@ -180,6 +191,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
             label="Maintenance Bulan Ini"
             value={`${maintenance.count} (Rp ${maintenance.totalCost.toLocaleString('id-ID')})`}
             icon={Wrench}
+            href="/admin/maintenance"
             colorClass="text-primary bg-primary-subtle"
           />
         )}
