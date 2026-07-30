@@ -3,7 +3,7 @@
 
 import { monthRange, periodsInRange } from '@/lib/billing';
 import { prisma } from '@/lib/prisma';
-import type { Payment } from '@prisma/client';
+import type { Payment } from '@/generated/prisma/client';
 import type { AddPartialPaymentInput } from '@/lib/validations';
 
 export type PaymentStatus = 'PENDING' | 'DUE' | 'OVERDUE' | 'PAID';

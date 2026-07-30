@@ -3,7 +3,7 @@ import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
-import type { MaintenanceScope } from '@prisma/client';
+import type { MaintenanceScope } from '@/generated/prisma/client';
 
 import { Forbidden } from '../../Forbidden';
 import { ReportFilterBar } from '../ReportFilterBar';

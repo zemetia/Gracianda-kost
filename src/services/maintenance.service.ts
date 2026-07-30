@@ -1,7 +1,7 @@
 // Server-only: Prisma-backed domain service.
 
 import { prisma } from '@/lib/prisma';
-import type { MaintenanceScope, Prisma } from '@prisma/client';
+import type { MaintenanceScope, Prisma } from '@/generated/prisma/client';
 import type { MaintenanceInput } from '@/lib/validations';
 
 interface MaintenanceFilter {

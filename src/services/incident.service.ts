@@ -1,7 +1,7 @@
 // Server-only: Prisma-backed domain service.
 
 import { prisma } from '@/lib/prisma';
-import type { IncidentCategory, IncidentStatus, Prisma } from '@prisma/client';
+import type { IncidentCategory, IncidentStatus, Prisma } from '@/generated/prisma/client';
 import type { IncidentInput, IncidentStatusInput } from '@/lib/validations';
 
 interface IncidentFilter {
