@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LockKeyhole } from 'lucide-react';
 import { useState } from 'react';
 
 import { Link } from '@/i18n/navigation';
@@ -57,6 +57,13 @@ export function Header({ className }: HeaderProps) {
         {/* Right controls */}
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
+          <Link
+            href="/sign-in"
+            className="hidden lg:flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-bold text-foreground-muted transition-all hover:bg-surface-raised hover:text-foreground"
+          >
+            <LockKeyhole className="h-4 w-4" />
+            Login Admin
+          </Link>
           <a
             href="#kamar"
             className="hidden lg:flex items-center justify-center bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-sm px-5 py-2.5 rounded-full transition-all shadow-sm"
@@ -93,7 +100,15 @@ export function Header({ className }: HeaderProps) {
               {label}
             </a>
           ))}
-          <div className="mt-2 pt-2 border-t border-border/40">
+          <div className="mt-2 pt-2 border-t border-border/40 flex flex-col gap-2">
+            <Link
+              href="/sign-in"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-center gap-1.5 rounded-2xl border border-border bg-surface text-foreground-muted font-bold text-sm px-5 py-3 transition-all"
+            >
+              <LockKeyhole className="h-4 w-4" />
+              Login Admin
+            </Link>
             <a
               href="#kamar"
               onClick={() => setMenuOpen(false)}
