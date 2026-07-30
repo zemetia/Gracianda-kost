@@ -4,7 +4,7 @@
 
 import { prisma } from '@/lib/prisma';
 import type { AuditLogFilterInput } from '@/lib/validations';
-import type { AuditAction, Prisma } from '@prisma/client';
+import type { AuditAction, Prisma } from '@/generated/prisma/client';
 
 interface LogParams {
   userId: string;

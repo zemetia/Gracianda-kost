@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useTransition } from 'react';
-import type { Attachment } from '@prisma/client';
+import type { Attachment } from '@/generated/prisma/client';
 
 import { Button } from '@/components/ui/Button';
 

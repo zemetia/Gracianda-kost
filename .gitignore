@@ -33,6 +33,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Prisma generated client
+/src/generated/prisma
+
 # IDE
 .vscode/
 .idea/

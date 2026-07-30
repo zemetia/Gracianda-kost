@@ -3,7 +3,7 @@
 // docs/plan/02-modules-features.md §9.
 
 import { prisma } from '@/lib/prisma';
-import type { IncidentCategory, IncidentStatus, MaintenanceScope, Prisma } from '@prisma/client';
+import type { IncidentCategory, IncidentStatus, MaintenanceScope, Prisma } from '@/generated/prisma/client';
 
 import { getPaymentStatus } from './payment.service';
 

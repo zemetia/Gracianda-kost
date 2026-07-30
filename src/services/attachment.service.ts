@@ -7,7 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { prisma } from '@/lib/prisma';
-import type { AttachmentEntity, AttachmentKind } from '@prisma/client';
+import type { AttachmentEntity, AttachmentKind } from '@/generated/prisma/client';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'public', 'uploads');
 const MAX_FILE_BYTES = 5 * 1024 * 1024;

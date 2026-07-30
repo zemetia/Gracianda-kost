@@ -6,7 +6,9 @@ import { prisma } from '@/lib/prisma';
 import { loginSchema } from '@/lib/validations';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  // @auth/prisma-adapter still types against the legacy `prisma-client-js` output;
+  // our Prisma 7 `prisma-client` generator produces a structurally different (but compatible) client.
+  adapter: PrismaAdapter(prisma as unknown as Parameters<typeof PrismaAdapter>[0]),
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/sign-in',

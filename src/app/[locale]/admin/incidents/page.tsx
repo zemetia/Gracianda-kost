@@ -7,7 +7,7 @@ import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
 import { incidentService } from '@/services/incident.service';
 import { roomService } from '@/services/room.service';
-import type { IncidentCategory, IncidentStatus } from '@prisma/client';
+import type { IncidentCategory, IncidentStatus } from '@/generated/prisma/client';
 
 interface Props {
   searchParams: Promise<{
