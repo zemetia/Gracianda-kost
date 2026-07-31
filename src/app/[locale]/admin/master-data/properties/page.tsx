@@ -22,24 +22,24 @@ export default async function PropertiesPage() {
         </Link>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nama Properti</th>
-              <th className="px-4 py-3 font-medium">Kode</th>
-              <th className="px-4 py-3 font-medium">Tipe</th>
-              <th className="px-4 py-3 font-medium">Alamat</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium" />
+          <thead>
+            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
+              <th>Nama Properti</th>
+              <th>Kode</th>
+              <th>Tipe</th>
+              <th>Alamat</th>
+              <th>Status</th>
+              <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {properties.map((prop) => (
-              <tr key={prop.id}>
-                <td className="px-4 py-3 font-medium text-foreground">{prop.name}</td>
-                <td className="px-4 py-3 text-foreground-muted font-mono">{prop.code}</td>
-                <td className="px-4 py-3 text-foreground-muted">
+              <tr key={prop.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
+                <td className="font-medium text-foreground">{prop.name}</td>
+                <td className="font-mono text-foreground-muted">{prop.code}</td>
+                <td>
                   <Badge variant="secondary">
                     {prop.type === 'KOST' && 'Kost'}
                     {prop.type === 'HOUSE' && 'Rumah/Villa'}
@@ -48,15 +48,15 @@ export default async function PropertiesPage() {
                     {prop.type === 'OTHER' && 'Lainnya'}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-foreground-muted max-w-[250px] truncate">
-                  {prop.address || '-'}
+                <td className="max-w-[250px] truncate text-foreground-muted">
+                  {prop.address || '—'}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <Badge variant={prop.isActive ? 'success' : 'outline'}>
                     {prop.isActive ? 'Aktif' : 'Nonaktif'}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="pr-0 text-right">
                   <div className="flex justify-end gap-2">
                     <Link href={`/admin/master-data/properties/${prop.id}`}>
                       <Button variant="ghost" size="sm">
@@ -76,7 +76,7 @@ export default async function PropertiesPage() {
             ))}
             {properties.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={6} className="py-8 text-center text-foreground-muted">
                   Belum ada properti.
                 </td>
               </tr>

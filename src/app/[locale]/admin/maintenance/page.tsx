@@ -1,11 +1,13 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
+import { formatDate, formatRupiah } from '@/lib/utils';
 import { maintenanceService } from '@/services/maintenance.service';
 import { roomService } from '@/services/room.service';
 
@@ -56,85 +58,77 @@ export default async function MaintenancePage({ searchParams }: Props) {
         )}
       </div>
 
-      <Card>
-        <CardContent>
-          <form method="get" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="scope" className="text-sm font-medium text-foreground">
-                Scope
-              </label>
-              <select
-                id="scope"
+      <Card noPadding>
+        <CardContent className="p-4">
+          <form method="get" className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid flex-1 grid-cols-2 gap-4 lg:max-w-3xl lg:grid-cols-4">
+              <Select
                 name="scope"
+                label="Scope"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={scope ?? ''}
-                className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Semua</option>
-                <option value="ROOM">Per Kamar</option>
-                <option value="BUILDING">Gedung</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="floorId" className="text-sm font-medium text-foreground">
-                Lantai
-              </label>
-              <select
-                id="floorId"
+                options={[
+                  { value: 'ROOM', label: 'Per Kamar' },
+                  { value: 'BUILDING', label: 'Gedung' },
+                ]}
+              />
+              <Select
                 name="floorId"
+                label="Lantai"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={floorId ?? ''}
-                className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Semua</option>
-                {floors.map((floor) => (
-                  <option key={floor.id} value={floor.id}>
-                    {floor.name}
-                  </option>
-                ))}
-              </select>
+                options={floors.map((floor) => ({ value: floor.id, label: floor.name }))}
+              />
+              <DatePicker label="Dari Tanggal" name="from" size="sm" defaultValue={from} />
+              <DatePicker label="Sampai Tanggal" name="to" size="sm" defaultValue={to} />
             </div>
-            <Input label="Dari Tanggal" name="from" type="date" defaultValue={from} />
-            <Input label="Sampai Tanggal" name="to" type="date" defaultValue={to} />
-            <Button type="submit" variant="secondary" className="col-span-2 self-end sm:col-span-4 sm:w-fit">
+            <Button type="submit" size="sm" variant="secondary" className="shrink-0">
               Terapkan Filter
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Tanggal</th>
-              <th className="px-4 py-3 font-medium">Scope</th>
-              <th className="px-4 py-3 font-medium">Kategori</th>
-              <th className="px-4 py-3 font-medium">Biaya</th>
-              <th className="px-4 py-3 font-medium">Vendor</th>
+          <thead>
+            <tr className="border-b border-border text-left">
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Tanggal</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Scope</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Kategori</th>
+              <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">Biaya</th>
+              <th className="py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">Vendor</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {records.map((record) => (
-              <tr key={record.id}>
-                <td className="px-4 py-3 text-foreground-muted">{record.date.toLocaleDateString('id-ID')}</td>
-                <td className="px-4 py-3">
+              <tr key={record.id} className="border-b border-border">
+                <td className="py-2.5 pr-4 tabular-nums text-foreground-muted">
+                  {formatDate(record.date, 'id-ID')}
+                </td>
+                <td className="py-2.5 pr-4">
                   <div className="flex flex-col gap-1">
                     <Badge variant="outline" className="w-fit">
                       {SCOPE_LABEL[record.scope]}
                       {record.room ? ` — No. ${record.room.number} ${record.room.floor ? `(${record.room.floor.name})` : ''}` : ''}
                     </Badge>
-                    <span className="text-[10px] text-foreground-muted">{record.property.name}</span>
+                    <span className="text-xs text-foreground-muted">{record.property.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">{record.category}</td>
-                <td className="px-4 py-3 text-foreground-muted">
-                  {record.cost ? `Rp ${record.cost.toNumber().toLocaleString('id-ID')}` : '—'}
+                <td className="py-2.5 pr-4 text-foreground">{record.category}</td>
+                <td className="py-2.5 pr-4 text-right tabular-nums">
+                  {record.cost ? formatRupiah(record.cost.toNumber()) : '—'}
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">{record.vendor ?? '—'}</td>
+                <td className="py-2.5 text-foreground-muted">{record.vendor ?? '—'}</td>
               </tr>
             ))}
             {records.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={5} className="py-8 text-center text-foreground-muted">
                   Belum ada catatan maintenance.
                 </td>
               </tr>

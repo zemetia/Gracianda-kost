@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { MetricBlock, MetricRow } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
+import { formatNumber, formatPercent, formatRupiah } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 
@@ -24,8 +25,10 @@ export default async function FinancialReportPage({ searchParams }: Props) {
     roomService.listFloors(),
   ]);
 
+  const margin = report.totalRevenue > 0 ? (report.profit / report.totalRevenue) * 100 : null;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <div>
         <Typography variant="h2" className="mb-1">
           Laporan Keuangan
@@ -35,63 +38,80 @@ export default async function FinancialReportPage({ searchParams }: Props) {
 
       <ReportFilterBar floors={floors} from={from} to={to} floorId={floorId} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Total Pendapatan</Typography>
-            <Typography variant="h3">Rp {report.totalRevenue.toLocaleString('id-ID')}</Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Total Biaya Maintenance</Typography>
-            <Typography variant="h3">Rp {report.totalCost.toLocaleString('id-ID')}</Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Profit</Typography>
-            <Typography variant="h3">Rp {report.profit.toLocaleString('id-ID')}</Typography>
-          </CardContent>
-        </Card>
-      </div>
+      <MetricRow columns={3}>
+        <MetricBlock
+          label="Total Pendapatan"
+          value={formatNumber(report.totalRevenue)}
+          prefix="Rp"
+          size="hero"
+        />
+        <MetricBlock
+          label="Total Biaya Maintenance"
+          value={formatNumber(report.totalCost)}
+          prefix="Rp"
+          tone={report.totalCost > 0 ? 'default' : 'muted'}
+        />
+        <MetricBlock
+          label="Profit"
+          value={formatNumber(report.profit)}
+          prefix="Rp"
+          tone={report.profit < 0 ? 'destructive' : 'default'}
+          meta={margin === null ? 'Belum ada pendapatan' : `Margin ${formatPercent(margin)}`}
+        />
+      </MetricRow>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Breakdown per Kamar</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
+      <section className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold text-foreground">Breakdown per Kamar</h3>
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-surface-raised text-left text-foreground-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Kamar</th>
-                <th className="px-4 py-3 font-medium">Pendapatan</th>
-                <th className="px-4 py-3 font-medium">Biaya</th>
-                <th className="px-4 py-3 font-medium">Profit</th>
+            <thead>
+              <tr className="border-b border-border text-left">
+                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                  Kamar
+                </th>
+                <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                  Pendapatan
+                </th>
+                <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                  Biaya
+                </th>
+                <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                  Profit
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {report.byRoom.map((row) => (
-                <tr key={row.roomNumber}>
-                  <td className="px-4 py-3 font-medium text-foreground">{row.roomNumber}</td>
-                  <td className="px-4 py-3 text-foreground-muted">Rp {row.revenue.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-3 text-foreground-muted">Rp {row.cost.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-3 text-foreground-muted">
-                    Rp {(row.revenue - row.cost).toLocaleString('id-ID')}
+                <tr key={row.roomNumber} className="border-b border-border">
+                  <td className="py-2.5 pr-4 font-medium text-foreground">{row.roomNumber}</td>
+                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(row.revenue)}</td>
+                  <td className="py-2.5 pr-4 text-right tabular-nums text-foreground-muted">
+                    {formatRupiah(row.cost)}
                   </td>
+                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(row.revenue - row.cost)}</td>
                 </tr>
               ))}
               {report.byRoom.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-foreground-subtle">
+                  <td colSpan={4} className="py-8 text-center text-foreground-muted">
                     Tidak ada data untuk periode ini.
                   </td>
                 </tr>
               )}
             </tbody>
+            {report.byRoom.length > 0 && (
+              <tfoot>
+                <tr className="border-t border-border font-semibold">
+                  <td className="py-2.5 pr-4">Total</td>
+                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(report.totalRevenue)}</td>
+                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(report.totalCost)}</td>
+                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.profit)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

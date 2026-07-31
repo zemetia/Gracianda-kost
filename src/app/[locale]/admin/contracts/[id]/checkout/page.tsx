@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Typography } from '@/components/ui/Typography';
-import { Link } from '@/i18n/navigation';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { contractService } from '@/services/contract.service';
 import { paymentService } from '@/services/payment.service';
 
@@ -20,35 +18,19 @@ export default async function CheckoutContractPage({ params }: Props) {
   const outstanding = await paymentService.getOutstandingByContract(id);
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <div>
-        <Typography variant="h2" className="mb-1">
-          Check-out Penyewa
-        </Typography>
-        <Typography variant="muted">
-          {contract.tenant.fullName} · {contract.room.property.name} Unit {contract.room.number} ·{' '}
-          <Link href={`/admin/contracts/${contract.id}`} className="hover:underline">
-            {contract.contractCode}
-          </Link>
-        </Typography>
-      </div>
+    <div className="flex max-w-5xl flex-col gap-8">
+      <PageHeader
+        title="Check-out Penyewa"
+        description={`${contract.tenant.fullName} · ${contract.room.property.name} Unit ${contract.room.number} · ${contract.contractCode} — tunggakan, deposit, dan kondisi kamar diselesaikan di satu layar.`}
+        backHref={`/admin/contracts/${contract.id}`}
+        backLabel="Detail Kontrak"
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Penyelesaian Akhir</CardTitle>
-          <CardDescription>
-            Tunggakan, deposit, dan kondisi kamar diselesaikan di satu layar — supaya tidak ada
-            uang jaminan yang hilang jejaknya.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CheckoutForm
-            contractId={contract.id}
-            deposit={contract.deposit?.toNumber() ?? 0}
-            outstanding={outstanding}
-          />
-        </CardContent>
-      </Card>
+      <CheckoutForm
+        contractId={contract.id}
+        deposit={contract.deposit?.toNumber() ?? 0}
+        outstanding={outstanding}
+      />
     </div>
   );
 }

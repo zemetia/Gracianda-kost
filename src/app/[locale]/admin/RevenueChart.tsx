@@ -1,3 +1,5 @@
+import { formatRupiah } from '@/lib/utils';
+
 interface Point {
   month: number;
   year: number;
@@ -44,7 +46,7 @@ export function RevenueChart({ data }: { data: Point[] }) {
         return (
           <g key={`${point.year}-${point.month}`}>
             <title>
-              {MONTH_SHORT_ID[point.month - 1]} {point.year}: Rp {point.total.toLocaleString('id-ID')}
+              {MONTH_SHORT_ID[point.month - 1]} {point.year}: {formatRupiah(point.total)}
             </title>
             <rect x={x} y={y} width={barWidth} height={Math.max(barHeight, 2)} rx={4} className="fill-primary" />
             <text

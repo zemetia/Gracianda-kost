@@ -19,6 +19,7 @@
 # Env files
 .env
 .env*.local
+.env.prod
 !.env.example
 
 # Debug

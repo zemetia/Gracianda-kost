@@ -27,6 +27,8 @@
 | **Middleware/rate limit/security headers** | [docs/blueprint/ARCHITECTURE/04-proxy.md](docs/blueprint/ARCHITECTURE/04-proxy.md) |
 | Components + CVA + tests | [docs/blueprint/COMPONENTS.md](docs/blueprint/COMPONENTS.md) |
 | Design tokens + Tailwind v4 | [docs/blueprint/DESIGN_SYSTEM.md](docs/blueprint/DESIGN_SYSTEM.md) |
+| **Metrics / KPI / charts / Rupiah formatting** | [docs/blueprint/DATA_PRESENTATION.md](docs/blueprint/DATA_PRESENTATION.md) |
+| Prisma schema + auth + `db:*` scripts | [docs/blueprint/DATABASE.md](docs/blueprint/DATABASE.md) |
 | Services + API client + Zod | [docs/blueprint/SERVICES.md](docs/blueprint/SERVICES.md) |
 | Zustand state + persistence | [docs/blueprint/STATE.md](docs/blueprint/STATE.md) |
 | i18n + routing + translations | [docs/blueprint/I18N.md](docs/blueprint/I18N.md) |
@@ -43,6 +45,8 @@ Next.js 16 · TypeScript 6 (strict) · Tailwind v4 · next-intl v4 · TanStack Q
 - Navigation: always `@/i18n/navigation`, never `next/navigation`
 - Server data: TanStack Query only — no `useState` for API responses
 - Colors: design tokens only — no raw hex / oklch / Tailwind color utilities
+- Metrics: editorial data blocks, never boxed stat cards — read `docs/blueprint/DATA_PRESENTATION.md` before rendering any number
+- Money: `Prisma.Decimal` → `.toNumber()` in the service; format with the shared `formatRupiah`, never a page-local copy
 - `npm run lint` must exit 0 (`--max-warnings 0`)
 - `'use client'` only when required (hook / event / browser API)
 - Services are plain objects — never call `fetch`/`apiClient` directly in components

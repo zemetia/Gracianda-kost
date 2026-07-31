@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Typography } from '@/components/ui/Typography';
-import { Link } from '@/i18n/navigation';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { contractService } from '@/services/contract.service';
 import { roomService } from '@/services/room.service';
 
@@ -21,49 +19,32 @@ export default async function TransferRoomPage({ params }: Props) {
   const availableRooms = await roomService.listAvailable();
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <div>
-        <Typography variant="h2" className="mb-1">
-          Pindah Kamar
-        </Typography>
-        <Typography variant="muted">
-          {contract.tenant.fullName} · dari {contract.room.property.name} Unit{' '}
-          {contract.room.number} ·{' '}
-          <Link href={`/admin/contracts/${contract.id}`} className="hover:underline">
-            {contract.contractCode}
-          </Link>
-        </Typography>
-      </div>
+    <div className="flex max-w-5xl flex-col gap-8">
+      <PageHeader
+        title="Pindah Kamar"
+        description={`${contract.tenant.fullName} · dari ${contract.room.property.name} Unit ${contract.room.number} · ${contract.contractCode} — kontrak lama ditutup pada tanggal pindah dan kamar lama langsung kembali tersedia, keduanya dalam satu transaksi.`}
+        backHref={`/admin/contracts/${contract.id}`}
+        backLabel="Detail Kontrak"
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Kamar & Masa Sewa Baru</CardTitle>
-          <CardDescription>
-            Kontrak lama ditutup pada tanggal pindah dan kamar lama langsung kembali tersedia —
-            keduanya dalam satu transaksi.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ContractTermForm
-            action={transferRoomAction.bind(null, contract.id)}
-            submitLabel="Pindahkan Penyewa"
-            rooms={availableRooms.map((room) => ({
-              id: room.id,
-              number: room.number,
-              propertyName: room.property.name,
-              floorName: room.floor?.name ?? null,
-              price: room.price.toNumber(),
-            }))}
-            defaults={{
-              rentPrice: contract.rentPrice.toNumber(),
-              deposit: contract.deposit?.toNumber() ?? null,
-              billingCycle: contract.billingCycle,
-              billingInterval: contract.billingInterval,
-              startDate: new Date().toISOString().split('T')[0] || '',
-            }}
-          />
-        </CardContent>
-      </Card>
+      <ContractTermForm
+        action={transferRoomAction.bind(null, contract.id)}
+        submitLabel="Pindahkan Penyewa"
+        rooms={availableRooms.map((room) => ({
+          id: room.id,
+          number: room.number,
+          propertyName: room.property.name,
+          floorName: room.floor?.name ?? null,
+          price: room.price.toNumber(),
+        }))}
+        defaults={{
+          rentPrice: contract.rentPrice.toNumber(),
+          deposit: contract.deposit?.toNumber() ?? null,
+          billingCycle: contract.billingCycle,
+          billingInterval: contract.billingInterval,
+          startDate: new Date().toISOString().split('T')[0] || '',
+        }}
+      />
     </div>
   );
 }

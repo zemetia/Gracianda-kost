@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { MetricBlock, MetricRow } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { formatDate, formatNumber, formatRupiah } from '@/lib/utils';
 import { facilityService } from '@/services/facility.service';
 import { roomService } from '@/services/room.service';
 import { attachmentService } from '@/services/attachment.service';
@@ -76,7 +78,7 @@ export default async function EditRoomPage({ params }: Props) {
   );
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
+    <div className="flex max-w-5xl flex-col gap-8">
       <Card>
         <CardHeader>
           <CardTitle>Kamar {room.number} — {room.property.name}</CardTitle>
@@ -99,11 +101,9 @@ export default async function EditRoomPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit Kamar</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="flex flex-col gap-6 border-t border-border pt-8">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Edit Kamar</h2>
+        <div>
           <RoomForm
             action={updateRoomAction.bind(null, id)}
             propertyId={room.propertyId}
@@ -125,8 +125,8 @@ export default async function EditRoomPage({ params }: Props) {
               })),
             }}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <Card>
         <CardHeader>
@@ -142,20 +142,27 @@ export default async function EditRoomPage({ params }: Props) {
           <CardTitle>Riwayat Kamar</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-            <div>
-              <Typography variant="muted">Total Pemasukan</Typography>
-              <Typography variant="p">Rp {history.totalIncome.toLocaleString('id-ID')}</Typography>
-            </div>
-            <div>
-              <Typography variant="muted">Total Biaya Maintenance</Typography>
-              <Typography variant="p">Rp {history.totalCost.toLocaleString('id-ID')}</Typography>
-            </div>
-            <div>
-              <Typography variant="muted">Profitabilitas Bersih</Typography>
-              <Typography variant="p">Rp {history.netProfitability.toLocaleString('id-ID')}</Typography>
-            </div>
-          </div>
+          <MetricRow columns={3} bordered={false} className="gap-6 lg:gap-0">
+            <MetricBlock
+              label="Total Pemasukan"
+              value={formatNumber(history.totalIncome)}
+              prefix="Rp"
+              size="secondary"
+            />
+            <MetricBlock
+              label="Total Biaya Maintenance"
+              value={formatNumber(history.totalCost)}
+              prefix="Rp"
+              size="secondary"
+            />
+            <MetricBlock
+              label="Profitabilitas Bersih"
+              value={formatNumber(history.netProfitability)}
+              prefix="Rp"
+              size="secondary"
+              tone={history.netProfitability < 0 ? 'destructive' : 'default'}
+            />
+          </MetricRow>
 
           <div>
             <Typography variant="h6" as="p" className="mb-2">
@@ -186,10 +193,10 @@ export default async function EditRoomPage({ params }: Props) {
               {history.maintenance.map((record) => (
                 <div key={record.id} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
                   <span className="text-foreground">
-                    {record.category} — {record.date.toLocaleDateString('id-ID')}
+                    {record.category} — {formatDate(record.date, 'id-ID')}
                   </span>
-                  <span className="text-foreground-muted">
-                    {record.cost ? `Rp ${record.cost.toNumber().toLocaleString('id-ID')}` : '—'}
+                  <span className="tabular-nums text-foreground-muted">
+                    {record.cost ? formatRupiah(record.cost.toNumber()) : '—'}
                   </span>
                 </div>
               ))}

@@ -3,7 +3,13 @@
 import { useActionState, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
+import { DatePicker, toISODate } from '@/components/ui/DatePicker';
+import { FormCard, FormError, FormGrid, FormLayout, FormStickyBar } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
+import { MetricBlock } from '@/components/ui/Metric';
+import { formatNumber, formatRupiah } from '@/lib/utils';
 
 import { checkoutContractAction, type ContractFormState } from '../actions';
 
@@ -15,115 +21,94 @@ interface Props {
 
 const initialState: ContractFormState = {};
 
-function rupiah(value: number): string {
-  return `Rp ${value.toLocaleString('id-ID')}`;
-}
-
 export function CheckoutForm({ contractId, deposit, outstanding }: Props) {
   const [state, formAction, isPending] = useActionState(
     checkoutContractAction.bind(null, contractId),
     initialState,
   );
 
-  const [deduction, setDeduction] = useState(0);
+  const [deduction, setDeduction] = useState<number | ''>('');
   const [hasDamage, setHasDamage] = useState(false);
 
-  const refund = Math.max(deposit - Math.min(deduction, deposit), 0);
+  const refund = Math.max(deposit - Math.min(Number(deduction) || 0, deposit), 0);
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
-          label="Tanggal Keluar"
-          name="actualEndDate"
-          type="date"
-          required
-          defaultValue={new Date().toISOString().split('T')[0]}
-          error={state.fieldErrors?.actualEndDate?.[0]}
-        />
-      </div>
-
-      <div
-        className={`rounded-lg border p-4 ${
-          outstanding > 0 ? 'border-destructive/30 bg-destructive-subtle' : 'border-border bg-surface-raised'
-        }`}
-      >
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-          Sisa Tunggakan
-        </p>
-        <p
-          className={`mt-1 text-2xl font-bold ${
-            outstanding > 0 ? 'text-destructive' : 'text-success'
-          }`}
-        >
-          {rupiah(outstanding)}
-        </p>
-        <p className="mt-1 text-xs text-foreground-muted">
-          {outstanding > 0
-            ? 'Tagih atau potong dari deposit sebelum penyewa keluar.'
-            : 'Semua tagihan penyewa ini sudah lunas.'}
-        </p>
-      </div>
-
-      <fieldset className="flex flex-col gap-4 rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-medium text-foreground">Penyelesaian Deposit</legend>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <p className="text-xs text-foreground-muted">Deposit Diterima</p>
-            <p className="mt-1 text-sm font-semibold text-foreground">{rupiah(deposit)}</p>
-          </div>
-          <Input
-            label="Potongan"
-            name="depositDeduction"
-            type="number"
-            min={0}
-            max={deposit}
-            step="1000"
-            value={deduction || ''}
-            onChange={(event) => setDeduction(Number(event.target.value))}
+    <form action={formAction}>
+      <FormLayout>
+        {/* Metrics stay typographic — cards are for input, not for numbers. */}
+        <section className="border-y border-border py-6">
+          <MetricBlock
+            label="Sisa Tunggakan"
+            value={formatNumber(outstanding)}
+            prefix="Rp"
+            size="secondary"
+            tone={outstanding > 0 ? 'destructive' : 'muted'}
+            meta={
+              outstanding > 0
+                ? 'Tagih atau potong dari deposit sebelum penyewa keluar.'
+                : 'Semua tagihan penyewa ini sudah lunas.'
+            }
           />
-          <div>
-            <p className="text-xs text-foreground-muted">Dikembalikan</p>
-            <p className="mt-1 text-sm font-semibold text-success">{rupiah(refund)}</p>
-          </div>
-        </div>
+        </section>
 
-        <Input label="Catatan Deposit" name="depositNote" placeholder="Alasan potongan, cara pengembalian" />
-      </fieldset>
+        <FormCard title="Tanggal Keluar" description="Tanggal penyewa benar-benar meninggalkan unit.">
+          <DatePicker
+            label="Tanggal Keluar"
+            name="actualEndDate"
+            required
+            className="sm:max-w-xs"
+            defaultValue={toISODate(new Date())}
+            error={state.fieldErrors?.actualEndDate?.[0]}
+          />
+        </FormCard>
 
-      <fieldset className="flex flex-col gap-4 rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-medium text-foreground">Kondisi Kamar</legend>
+        <FormCard
+          title="Penyelesaian Deposit"
+          description={`Deposit diterima ${formatRupiah(deposit)}. Sisa setelah potongan dikembalikan ke penyewa.`}
+        >
+          <FormGrid>
+            <CurrencyInput
+              label="Potongan"
+              name="depositDeduction"
+              value={deduction}
+              onValueChange={setDeduction}
+              hint={`Maksimal ${formatRupiah(deposit)}.`}
+            />
+            <MetricBlock
+              label="Dikembalikan"
+              value={formatNumber(refund)}
+              prefix="Rp"
+              size="secondary"
+              className="self-end pb-1"
+            />
+          </FormGrid>
 
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
+          <Input label="Catatan Deposit" name="depositNote" placeholder="Alasan potongan, cara pengembalian" />
+        </FormCard>
+
+        <FormCard title="Kondisi Kamar" description="Kerusakan otomatis tercatat sebagai maintenance kamar ini.">
+          <Checkbox
             checked={hasDamage}
             onChange={(event) => setHasDamage(event.target.checked)}
+            label="Ada kerusakan yang perlu diperbaiki"
           />
-          Ada kerusakan yang perlu diperbaiki
-        </label>
 
-        {hasDamage && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Kerusakan" name="damageNote" required placeholder="Kaca jendela retak" />
-            <Input label="Perkiraan Biaya" name="damageCost" type="number" min={0} step="1000" />
-            <p className="text-xs text-foreground-muted sm:col-span-2">
-              Akan otomatis tercatat sebagai maintenance kamar ini.
-            </p>
-          </div>
-        )}
-      </fieldset>
+          {hasDamage && (
+            <FormGrid>
+              <Input label="Kerusakan" name="damageNote" required placeholder="Kaca jendela retak" />
+              <CurrencyInput label="Perkiraan Biaya" name="damageCost" />
+            </FormGrid>
+          )}
+        </FormCard>
 
-      {state.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
-      )}
+        <FormError message={state.error} />
 
-      <Button type="submit" variant="destructive" isLoading={isPending} className="self-start">
-        Proses Check-out
-      </Button>
+        <FormStickyBar secondary="Kontrak ditutup dan kamar kembali tersedia setelah check-out diproses.">
+          <Button type="submit" variant="destructive" isLoading={isPending}>
+            Proses Check-out
+          </Button>
+        </FormStickyBar>
+      </FormLayout>
     </form>
   );
 }

@@ -4,6 +4,7 @@ import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
+import { formatDate } from '@/lib/utils';
 import { contractService } from '@/services/contract.service';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -62,40 +63,40 @@ export default async function ContractsPage({ searchParams }: Props) {
         </Link>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Kode</th>
-              <th className="px-4 py-3 font-medium">Penyewa</th>
-              <th className="px-4 py-3 font-medium">Kamar</th>
-              <th className="px-4 py-3 font-medium">Mulai</th>
-              <th className="px-4 py-3 font-medium">Berakhir</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium" />
+          <thead>
+            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
+              <th>Kode</th>
+              <th>Penyewa</th>
+              <th>Kamar</th>
+              <th>Mulai</th>
+              <th>Berakhir</th>
+              <th>Status</th>
+              <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {contracts.map((contract) => (
-              <tr key={contract.id}>
-                <td className="px-4 py-3 font-medium text-foreground">
+              <tr key={contract.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
+                <td className="font-medium text-foreground">
                   <Link href={`/admin/contracts/${contract.id}`} className="hover:underline">
                     {contract.contractCode}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">{contract.tenant.fullName}</td>
-                <td className="px-4 py-3 text-foreground-muted">
+                <td className="text-foreground-muted">{contract.tenant.fullName}</td>
+                <td className="text-foreground-muted">
                   {contract.room.property.name} — No. {contract.room.number} {contract.room.floor ? `(${contract.room.floor.name})` : ''}
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">
-                  {contract.startDate.toLocaleDateString('id-ID')}
+                <td className="tabular-nums text-foreground-muted">
+                  {formatDate(contract.startDate, 'id-ID')}
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">
+                <td className="tabular-nums text-foreground-muted">
                   {contract.endDate ? (
                     <span className="flex flex-col">
-                      {contract.endDate.toLocaleDateString('id-ID')}
+                      {formatDate(contract.endDate, 'id-ID')}
                       {contract.status === 'ACTIVE' && daysUntil(contract.endDate) <= 30 && (
-                        <span className="text-xs font-semibold text-warning">
+                        <span className="text-xs font-medium text-foreground">
                           {daysUntil(contract.endDate)} hari lagi
                         </span>
                       )}
@@ -104,12 +105,12 @@ export default async function ContractsPage({ searchParams }: Props) {
                     '—'
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <Badge variant={contract.status === 'ACTIVE' ? 'success' : 'outline'}>
                     {STATUS_LABEL[contract.status]}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="pr-0 text-right">
                   {contract.status === 'ACTIVE' && canCreate && (
                     <div className="flex justify-end gap-1">
                       <Link href={`/admin/contracts/${contract.id}/renew`}>
@@ -129,7 +130,7 @@ export default async function ContractsPage({ searchParams }: Props) {
             ))}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={7} className="py-8 text-center text-foreground-muted">
                   {endingDays ? 'Tidak ada kontrak yang segera berakhir.' : 'Belum ada kontrak.'}
                 </td>
               </tr>

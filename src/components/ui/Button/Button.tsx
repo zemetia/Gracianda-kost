@@ -43,7 +43,8 @@ const buttonVariants = cva(
         xs: 'h-7 px-2.5 text-xs',
         sm: 'h-8 px-3 text-sm',
         md: 'h-9 px-4 text-sm',
-        lg: 'h-10 px-6 text-base',
+        /** Matches the default field height so a button can sit in a field row. */
+        lg: 'h-11 px-6 text-base',
         xl: 'h-12 px-8 text-base',
         icon: 'h-9 w-9',
         'icon-sm': 'h-8 w-8',

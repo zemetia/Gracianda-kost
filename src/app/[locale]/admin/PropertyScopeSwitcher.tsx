@@ -3,6 +3,8 @@
 import { Building2 } from 'lucide-react';
 import { useTransition } from 'react';
 
+import { Select } from '@/components/ui/Select';
+
 import { setPropertyScopeAction } from './actions';
 
 interface Property {
@@ -29,23 +31,17 @@ export function PropertyScopeSwitcher({ properties, value }: Props) {
       <label htmlFor="property-scope" className="text-xs font-semibold text-foreground-muted">
         Properti
       </label>
-      <select
+      <Select
         id="property-scope"
+        size="sm"
+        placeholder="Semua Properti"
+        allowEmpty
         defaultValue={value}
         disabled={isPending}
-        onChange={(event) => {
-          const next = event.target.value;
-          startTransition(() => setPropertyScopeAction(next));
-        }}
-        className="h-8 rounded-md border border-input bg-surface px-2 text-sm font-medium text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-      >
-        <option value="">Semua Properti</option>
-        {properties.map((property) => (
-          <option key={property.id} value={property.id}>
-            {property.name}
-          </option>
-        ))}
-      </select>
+        onValueChange={(next) => startTransition(() => setPropertyScopeAction(next))}
+        options={properties.map((property) => ({ value: property.id, label: property.name }))}
+        className="w-auto min-w-44"
+      />
     </div>
   );
 }

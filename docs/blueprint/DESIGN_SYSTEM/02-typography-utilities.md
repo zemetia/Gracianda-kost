@@ -72,6 +72,37 @@ Fonts loaded via `next/font/google` in `src/app/[locale]/layout.tsx`, injected a
 | `rounded-2xl` | `--radius-2xl` | `1.5rem` |
 | `rounded-full` | `--radius-full` | `9999px` |
 
+Form convention: cards `rounded-lg`, fields `rounded-md`, chips `rounded-full`.
+
+---
+
+## Elevation Tokens
+
+Admin data entry uses raised cards. Every shadow is tinted with the foreground green
+(`oklch(0.18 0.010 120)`), never neutral black — neutral black turns this warm palette grey and
+dirty. Defined in `@theme` in `src/app/globals.css`, so Tailwind generates the utilities.
+
+| Utility class | CSS variable | Use |
+|---|---|---|
+| `shadow-card` | `--shadow-card` | A `FormCard` at rest |
+| `shadow-card-hover` | `--shadow-card-hover` | A card with focus inside it |
+| `shadow-field` | `--shadow-field` | Inner shadow on the field shell — the "you type here" cue |
+| `shadow-popover` | `--shadow-popover` | Select / Combobox / DatePicker popovers |
+| `shadow-sticky-bar` | `--shadow-sticky-bar` | Upward shadow on `FormStickyBar` |
+
+The raised look depends on the base being darker than the card: `--color-background` (0.958) sits
+below `--color-card` / `--color-surface` (0.995), and `--color-field` is pure white. Do not flatten
+that ladder — the shadows alone are too subtle to carry it.
+
+| Token | Use |
+|---|---|
+| `bg-field` | The box a value is typed into |
+| `bg-field-hover` | Field under the cursor |
+| `bg-field-disabled` | Field that cannot be edited |
+
+Focus ring on a field is `ring-2 ring-primary/20` + `border-primary`, with **no** ring offset — an
+offset assumes a known backdrop, and a field sits on a card, not on the page background.
+
 ---
 
 ## Custom Utilities

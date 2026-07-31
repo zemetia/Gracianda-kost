@@ -1,113 +1,88 @@
-import { cva, type VariantProps } from 'class-variance-authority';
+'use client';
+
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 
+import {
+  Field,
+  fieldAffixClass,
+  fieldControlClass,
+  fieldShellVariants,
+  useFieldIds,
+  type FieldShellVariants,
+} from '@/components/ui/Field';
 import { cn } from '@/lib/cn';
 
-const inputVariants = cva(
-  [
-    'flex w-full rounded-md border bg-surface text-foreground',
-    'placeholder:text-foreground-subtle',
-    'transition-colors duration-150',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
-    'disabled:cursor-not-allowed disabled:opacity-50',
-    'file:border-0 file:bg-transparent file:font-medium',
-  ],
-  {
-    variants: {
-      size: {
-        sm: 'h-8 px-2.5 text-xs file:text-xs',
-        md: 'h-9 px-3 text-sm file:text-sm',
-        lg: 'h-10 px-4 text-base file:text-base',
-      },
-      inputState: {
-        default: 'border-input hover:border-border-strong',
-        error: 'border-destructive focus-visible:ring-destructive',
-        success: 'border-success focus-visible:ring-success',
-      },
-    },
-    defaultVariants: {
-      size: 'md',
-      inputState: 'default',
-    },
-  },
-);
-
-export type InputVariants = VariantProps<typeof inputVariants>;
-
-export interface InputProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'>,
-    Pick<InputVariants, 'size'> {
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
-  hint?: string;
+  hint?: ReactNode;
   error?: string;
+  /** Glued to the left of the value — `Rp`, a search icon, a country code. */
   leftAddon?: ReactNode;
+  /** Glued to the right — a unit like `m²`, a clear button. */
   rightAddon?: ReactNode;
-  required?: boolean;
+  size?: FieldShellVariants['fieldSize'];
+  /** Goes on the field wrapper — this is what `sm:col-span-2` belongs on. */
+  className?: string;
+  /** Goes on the `<input>` itself — rarely needed. */
+  inputClassName?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
-    { size, label, hint, error, leftAddon, rightAddon, className, id, required, ...props },
+    {
+      size,
+      label,
+      hint,
+      error,
+      leftAddon,
+      rightAddon,
+      className,
+      inputClassName,
+      id,
+      required,
+      disabled,
+      ...props
+    },
     ref,
   ) => {
-    const inputId = id ?? (label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
-    const inputState: InputVariants['inputState'] = error ? 'error' : 'default';
+    const { fieldId, hintId, errorId, describedBy } = useFieldIds(id, {
+      hasHint: !!hint,
+      hasError: !!error,
+    });
 
     return (
-      <div className="flex w-full flex-col gap-1.5">
-        {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-foreground">
-            {label}
-            {required && (
-              <span className="ml-0.5 text-destructive" aria-hidden="true">
-                *
-              </span>
-            )}
-          </label>
-        )}
-
-        <div className="relative flex items-center">
-          {leftAddon && (
-            <div className="pointer-events-none absolute left-3 flex items-center text-foreground-muted">
-              {leftAddon}
-            </div>
-          )}
+      <Field
+        label={label}
+        htmlFor={fieldId}
+        hint={hint}
+        error={error}
+        required={required}
+        hintId={hintId}
+        errorId={errorId}
+        className={className}
+      >
+        <div
+          className={fieldShellVariants({
+            fieldSize: size,
+            fieldState: error ? 'error' : 'default',
+          })}
+        >
+          {leftAddon && <span className={fieldAffixClass}>{leftAddon}</span>}
 
           <input
             ref={ref}
-            id={inputId}
+            id={fieldId}
             required={required}
+            disabled={disabled}
             aria-invalid={!!error}
-            aria-describedby={
-              error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
-            }
-            className={cn(
-              inputVariants({ size, inputState }),
-              leftAddon && 'pl-9',
-              rightAddon && 'pr-9',
-              className,
-            )}
+            aria-describedby={describedBy}
+            className={cn(fieldControlClass, 'h-full', inputClassName)}
             {...props}
           />
 
-          {rightAddon && (
-            <div className="pointer-events-none absolute right-3 flex items-center text-foreground-muted">
-              {rightAddon}
-            </div>
-          )}
+          {rightAddon && <span className={fieldAffixClass}>{rightAddon}</span>}
         </div>
-
-        {error && (
-          <p id={`${inputId}-error`} role="alert" className="text-xs text-destructive">
-            {error}
-          </p>
-        )}
-        {!error && hint && (
-          <p id={`${inputId}-hint`} className="text-xs text-foreground-subtle">
-            {hint}
-          </p>
-        )}
-      </div>
+      </Field>
     );
   },
 );

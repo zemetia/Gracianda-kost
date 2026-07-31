@@ -5,7 +5,7 @@ import type { FacilityInput } from '@/lib/validations';
 
 export const facilityService = {
   list() {
-    return prisma.facility.findMany({ orderBy: { name: 'asc' } });
+    return prisma.facility.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   },
 
   create(data: FacilityInput) {

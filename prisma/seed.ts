@@ -159,6 +159,84 @@ async function main() {
   }
 
   console.log('Seeded Rooms and RoomPrices: 101, 102, 201');
+
+  // 5. Seed Facilities (icon = nama icon lucide-react, kebab-case)
+  const facilitiesToSeed: {
+    name: string;
+    icon: string;
+    category: 'COMMON' | 'ROOM';
+  }[] = [
+    // --- Fasilitas Umum ---
+    { name: 'WiFi Area Bersama', icon: 'wifi', category: 'COMMON' },
+    { name: 'CCTV 24 Jam', icon: 'cctv', category: 'COMMON' },
+    { name: 'Keamanan 24 Jam', icon: 'shield-check', category: 'COMMON' },
+    { name: 'Akses Kartu Kunci', icon: 'key-round', category: 'COMMON' },
+    { name: 'Akses Masuk 24 Jam', icon: 'clock', category: 'COMMON' },
+    { name: 'Parkir Motor', icon: 'motorbike', category: 'COMMON' },
+    { name: 'Parkir Mobil', icon: 'car', category: 'COMMON' },
+    { name: 'Dapur Bersama', icon: 'cooking-pot', category: 'COMMON' },
+    { name: 'Microwave Bersama', icon: 'microwave', category: 'COMMON' },
+    { name: 'Kulkas Bersama', icon: 'refrigerator', category: 'COMMON' },
+    { name: 'Dispenser Air Minum', icon: 'glass-water', category: 'COMMON' },
+    { name: 'Ruang Tamu', icon: 'sofa', category: 'COMMON' },
+    { name: 'Ruang Kerja Bersama', icon: 'laptop', category: 'COMMON' },
+    { name: 'Mesin Cuci', icon: 'washing-machine', category: 'COMMON' },
+    { name: 'Area Jemur', icon: 'sun', category: 'COMMON' },
+    { name: 'Kamar Mandi Bersama', icon: 'bath', category: 'COMMON' },
+    { name: 'Air Panas Bersama', icon: 'shower-head', category: 'COMMON' },
+    { name: 'Musholla', icon: 'moon-star', category: 'COMMON' },
+    { name: 'Rooftop', icon: 'building', category: 'COMMON' },
+    { name: 'Taman', icon: 'trees', category: 'COMMON' },
+    { name: 'Kantin', icon: 'store', category: 'COMMON' },
+    { name: 'Gym', icon: 'dumbbell', category: 'COMMON' },
+    { name: 'Kolam Renang', icon: 'waves', category: 'COMMON' },
+    { name: 'Petugas Kebersihan', icon: 'brush-cleaning', category: 'COMMON' },
+    { name: 'Tempat Sampah Terpilah', icon: 'trash-2', category: 'COMMON' },
+    { name: 'Alat Pemadam Api (APAR)', icon: 'fire-extinguisher', category: 'COMMON' },
+    { name: 'Kotak P3K', icon: 'briefcase-medical', category: 'COMMON' },
+    { name: 'Genset Cadangan', icon: 'plug-zap', category: 'COMMON' },
+    { name: 'Loker Paket & Surat', icon: 'mailbox', category: 'COMMON' },
+    { name: 'Area Merokok', icon: 'cigarette', category: 'COMMON' },
+    { name: 'Air PDAM 24 Jam', icon: 'droplets', category: 'COMMON' },
+
+    // --- Fasilitas Kamar ---
+    { name: 'AC', icon: 'snowflake', category: 'ROOM' },
+    { name: 'Kipas Angin', icon: 'fan', category: 'ROOM' },
+    { name: 'Exhaust Fan', icon: 'air-vent', category: 'ROOM' },
+    { name: 'Jendela', icon: 'app-window', category: 'ROOM' },
+    { name: 'Gorden', icon: 'blinds', category: 'ROOM' },
+    { name: 'Kasur Spring Bed', icon: 'bed-double', category: 'ROOM' },
+    { name: 'Kasur Single', icon: 'bed-single', category: 'ROOM' },
+    { name: 'Bantal & Guling', icon: 'bed', category: 'ROOM' },
+    { name: 'Sprei & Bed Cover', icon: 'layers', category: 'ROOM' },
+    { name: 'Lemari Pakaian', icon: 'shirt', category: 'ROOM' },
+    { name: 'Meja Belajar', icon: 'lamp-desk', category: 'ROOM' },
+    { name: 'Kursi', icon: 'armchair', category: 'ROOM' },
+    { name: 'Rak Dinding', icon: 'rows-3', category: 'ROOM' },
+    { name: 'Cermin', icon: 'frame', category: 'ROOM' },
+    { name: 'Lampu Belajar', icon: 'lamp', category: 'ROOM' },
+    { name: 'TV', icon: 'tv', category: 'ROOM' },
+    { name: 'Kulkas Pribadi', icon: 'refrigerator', category: 'ROOM' },
+    { name: 'Kamar Mandi Dalam', icon: 'bath', category: 'ROOM' },
+    { name: 'Kloset Duduk', icon: 'toilet', category: 'ROOM' },
+    { name: 'Shower', icon: 'shower-head', category: 'ROOM' },
+    { name: 'Water Heater', icon: 'heater', category: 'ROOM' },
+    { name: 'Wastafel', icon: 'droplet', category: 'ROOM' },
+    { name: 'WiFi Kamar', icon: 'router', category: 'ROOM' },
+    { name: 'Stop Kontak Tambahan', icon: 'plug', category: 'ROOM' },
+    { name: 'Balkon Pribadi', icon: 'fence', category: 'ROOM' },
+    { name: 'Kunci Kamar Pribadi', icon: 'lock-keyhole', category: 'ROOM' },
+  ];
+
+  for (const facility of facilitiesToSeed) {
+    await prisma.facility.upsert({
+      where: { name: facility.name },
+      update: { icon: facility.icon, category: facility.category },
+      create: facility,
+    });
+  }
+
+  console.log(`Seeded Facilities: ${facilitiesToSeed.length}`);
 }
 
 main()

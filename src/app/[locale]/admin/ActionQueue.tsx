@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/cn';
+import { formatRupiah } from '@/lib/utils';
 import type { ActionQueue as ActionQueueData } from '@/services/dashboard.service';
 
 type Tone = 'critical' | 'warning' | 'neutral';
@@ -31,10 +32,6 @@ const TONE_CLASS: Record<Tone, string> = {
   warning: 'text-warning bg-warning-subtle',
   neutral: 'text-primary bg-primary-subtle',
 };
-
-function rupiah(value: number): string {
-  return `Rp ${value.toLocaleString('id-ID')}`;
-}
 
 // One flag per destination, not per widget: an item the admin can see but not
 // open is worse than no item at all — it reads as a task and pays out a 403.
@@ -64,7 +61,7 @@ export function ActionQueue({
       key: 'overdue',
       icon: AlarmClock,
       label: `${queue.overdue.count} tagihan terlambat`,
-      detail: rupiah(queue.overdue.amount),
+      detail: formatRupiah(queue.overdue.amount),
       cta: 'Tagih sekarang',
       href: `/admin/payments?bucket=OVERDUE${scope}`,
       tone: 'critical',
@@ -76,7 +73,7 @@ export function ActionQueue({
       key: 'due-soon',
       icon: CalendarClock,
       label: `${queue.dueSoon.count} tagihan jatuh tempo ≤3 hari`,
-      detail: rupiah(queue.dueSoon.amount),
+      detail: formatRupiah(queue.dueSoon.amount),
       cta: 'Kirim pengingat',
       href: `/admin/payments?bucket=DUE_SOON${scope}`,
       tone: 'warning',

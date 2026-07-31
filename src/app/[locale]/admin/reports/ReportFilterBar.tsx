@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
 
 import { PrintButton } from './PrintButton';
 
@@ -21,32 +22,29 @@ interface ReportFilterBarProps {
 
 export function ReportFilterBar({ floors, from, to, floorId, extra }: ReportFilterBarProps) {
   return (
-    <Card className="print:hidden">
-      <CardContent>
-        <form method="get" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Input label="Dari Tanggal" name="from" type="date" defaultValue={from} />
-          <Input label="Sampai Tanggal" name="to" type="date" defaultValue={to} />
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="floorId" className="text-sm font-medium text-foreground">
-              Lantai
-            </label>
-            <select
-              id="floorId"
+    <Card noPadding className="print:hidden">
+      <CardContent className="p-4">
+        <form
+          method="get"
+          className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+        >
+          <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-4 lg:max-w-3xl lg:grid-cols-4">
+            <DatePicker label="Dari Tanggal" name="from" size="sm" defaultValue={from} />
+            <DatePicker label="Sampai Tanggal" name="to" size="sm" defaultValue={to} />
+            <Select
               name="floorId"
+              label="Lantai"
+              size="sm"
+              placeholder="Semua"
+              allowEmpty
               defaultValue={floorId ?? ''}
-              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Semua</option>
-              {floors.map((floor) => (
-                <option key={floor.id} value={floor.id}>
-                  {floor.name}
-                </option>
-              ))}
-            </select>
+              options={floors.map((floor) => ({ value: floor.id, label: floor.name }))}
+            />
+            {extra}
           </div>
-          {extra}
-          <div className="col-span-2 flex items-end gap-2 sm:col-span-4">
-            <Button type="submit" variant="secondary">
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Button type="submit" size="sm" variant="secondary">
               Terapkan Filter
             </Button>
             <PrintButton />

@@ -1,6 +1,7 @@
-import { Card, CardContent } from '@/components/ui/Card';
+import { MetricBlock, MetricRow } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
+import { formatNumber } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 
@@ -24,8 +25,10 @@ export default async function TenantsReportPage({ searchParams }: Props) {
     roomService.listFloors(),
   ]);
 
+  const net = report.newThisPeriod - report.endedThisPeriod;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <div>
         <Typography variant="h2" className="mb-1">
           Laporan Penyewa
@@ -35,38 +38,33 @@ export default async function TenantsReportPage({ searchParams }: Props) {
 
       <ReportFilterBar floors={floors} from={from} to={to} floorId={floorId} />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Kontrak Aktif</Typography>
-            <Typography variant="h3">{report.active}</Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Keluar Periode Ini</Typography>
-            <Typography variant="h3">{report.endedThisPeriod}</Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Baru Periode Ini</Typography>
-            <Typography variant="h3">{report.newThisPeriod}</Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Terlambat Bayar</Typography>
-            <Typography variant="h3">{report.overdueCount}</Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography variant="muted">Blacklist</Typography>
-            <Typography variant="h3">{report.blacklisted}</Typography>
-          </CardContent>
-        </Card>
-      </div>
+      <section className="border-y border-border py-8">
+        <MetricBlock
+          label="Kontrak Aktif"
+          value={formatNumber(report.active)}
+          size="hero"
+          meta={
+            net === 0
+              ? 'Jumlah penghuni tetap pada periode ini'
+              : `${net > 0 ? '+' : '−'}${formatNumber(Math.abs(net))} penghuni pada periode ini`
+          }
+        />
+      </section>
+
+      <MetricRow columns={4} stacked>
+        <MetricBlock label="Baru Periode Ini" value={formatNumber(report.newThisPeriod)} />
+        <MetricBlock label="Keluar Periode Ini" value={formatNumber(report.endedThisPeriod)} />
+        <MetricBlock
+          label="Terlambat Bayar"
+          value={formatNumber(report.overdueCount)}
+          tone={report.overdueCount > 0 ? 'destructive' : 'muted'}
+        />
+        <MetricBlock
+          label="Blacklist"
+          value={formatNumber(report.blacklisted)}
+          tone={report.blacklisted > 0 ? 'destructive' : 'muted'}
+        />
+      </MetricRow>
     </div>
   );
 }

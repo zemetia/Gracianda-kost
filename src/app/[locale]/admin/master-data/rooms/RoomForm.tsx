@@ -3,8 +3,13 @@
 import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { ChipGroup, ChipToggle } from '@/components/ui/Chip';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
+import { FormCard, FormError, FormGrid, FormLayout, FormStickyBar } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
-import { Typography } from '@/components/ui/Typography';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 
 import type { RoomFormState } from './actions';
 
@@ -16,7 +21,21 @@ interface Floor {
 interface Facility {
   id: string;
   name: string;
+  category: 'COMMON' | 'ROOM';
 }
+
+const FACILITY_GROUPS = [
+  { category: 'ROOM', label: 'Fasilitas Kamar' },
+  { category: 'COMMON', label: 'Fasilitas Umum' },
+] as const;
+
+const EXTRA_CYCLES = [
+  { name: 'priceDaily', label: 'Harian', cycle: 'DAILY', interval: 1 },
+  { name: 'priceWeekly', label: 'Mingguan', cycle: 'WEEKLY', interval: 1 },
+  { name: 'priceQuarterly', label: '3 Bulanan', cycle: 'MONTHLY', interval: 3 },
+  { name: 'priceSemiAnnual', label: '6 Bulanan', cycle: 'MONTHLY', interval: 6 },
+  { name: 'priceYearly', label: 'Tahunan', cycle: 'YEARLY', interval: 1 },
+] as const;
 
 interface RoomFormProps {
   action: (prevState: RoomFormState, formData: FormData) => Promise<RoomFormState>;
@@ -41,175 +60,122 @@ const initialState: RoomFormState = {};
 export function RoomForm({ action, propertyId, floors, facilities, initial, submitLabel }: RoomFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
 
-  const findPrice = (cycle: string, interval: number) => {
-    return initial?.prices?.find((p) => p.billingCycle === cycle && p.interval === interval)?.price;
-  };
-
-  const initialPriceDaily = findPrice('DAILY', 1);
-  const initialPriceWeekly = findPrice('WEEKLY', 1);
-  const initialPriceQuarterly = findPrice('MONTHLY', 3);
-  const initialPriceSemiAnnual = findPrice('MONTHLY', 6);
-  const initialPriceYearly = findPrice('YEARLY', 1);
+  const findPrice = (cycle: string, interval: number) =>
+    initial?.prices?.find((p) => p.billingCycle === cycle && p.interval === interval)?.price;
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form action={formAction}>
       <input type="hidden" name="propertyId" value={propertyId} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Input
-          label="Nomor / Nama Unit"
-          name="number"
-          required
-          defaultValue={initial?.number}
-          error={state.fieldErrors?.number?.[0]}
-        />
+      <FormLayout>
+        <FormCard title="Identitas Unit" description="Nomor kamar dan posisinya di dalam properti.">
+          <FormGrid columns={3}>
+            <Input
+              label="Nomor / Nama Unit"
+              name="number"
+              required
+              defaultValue={initial?.number}
+              error={state.fieldErrors?.number?.[0]}
+            />
+            <Select
+              name="floorId"
+              label="Lantai"
+              placeholder="Tanpa Lantai"
+              allowEmpty
+              defaultValue={initial?.floorId || ''}
+              options={floors.map((floor) => ({ value: floor.id, label: floor.name }))}
+              error={state.fieldErrors?.floorId?.[0]}
+            />
+            <Input
+              label="Ukuran"
+              name="sizeSqm"
+              type="number"
+              min={0}
+              step="0.1"
+              rightAddon="m²"
+              inputClassName="text-right tabular-nums"
+              defaultValue={initial?.sizeSqm ?? undefined}
+              error={state.fieldErrors?.sizeSqm?.[0]}
+            />
+          </FormGrid>
+        </FormCard>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="floorId" className="text-sm font-medium text-foreground">
-            Lantai (Opsional)
-          </label>
-          <select
-            id="floorId"
-            name="floorId"
-            defaultValue={initial?.floorId || ''}
-            className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Tanpa Lantai</option>
-            {floors.map((floor) => (
-              <option key={floor.id} value={floor.id}>
-                {floor.name}
-              </option>
-            ))}
-          </select>
-          {state.fieldErrors?.floorId && (
-            <p className="text-xs text-destructive">{state.fieldErrors.floorId[0]}</p>
-          )}
-        </div>
-
-        <Input
-          label="Harga Sewa / Bulan"
-          name="price"
-          type="number"
-          min={0}
-          step="1000"
-          required
-          defaultValue={initial?.price}
-          error={state.fieldErrors?.price?.[0]}
-        />
-
-        <Input
-          label="Ukuran (m²)"
-          name="sizeSqm"
-          type="number"
-          min={0}
-          step="0.1"
-          defaultValue={initial?.sizeSqm ?? undefined}
-          error={state.fieldErrors?.sizeSqm?.[0]}
-        />
-      </div>
-
-      <div className="border border-border/40 bg-surface-raised/20 rounded-xl p-5 flex flex-col gap-4">
-        <Typography variant="small" className="font-semibold text-foreground-muted">
-          Pilihan Siklus Harga Sewa Tambahan (Opsional)
-        </Typography>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Input
-            label="Harga Harian (Rp)"
-            name="priceDaily"
-            type="number"
-            min={0}
-            step="1000"
-            defaultValue={initialPriceDaily ?? ''}
+        <FormCard
+          title="Harga Sewa"
+          description="Harga bulanan wajib diisi. Siklus lain opsional — hanya yang terisi yang muncul saat membuat kontrak."
+        >
+          <CurrencyInput
+            label="Harga Sewa / Bulan"
+            name="price"
+            required
+            className="sm:max-w-sm"
+            defaultValue={initial?.price}
+            error={state.fieldErrors?.price?.[0]}
           />
-          <Input
-            label="Harga Mingguan (Rp)"
-            name="priceWeekly"
-            type="number"
-            min={0}
-            step="1000"
-            defaultValue={initialPriceWeekly ?? ''}
-          />
-          <Input
-            label="Harga 3 Bulanan (Rp)"
-            name="priceQuarterly"
-            type="number"
-            min={0}
-            step="1000"
-            defaultValue={initialPriceQuarterly ?? ''}
-          />
-          <Input
-            label="Harga 6 Bulanan (Rp)"
-            name="priceSemiAnnual"
-            type="number"
-            min={0}
-            step="1000"
-            defaultValue={initialPriceSemiAnnual ?? ''}
-          />
-          <Input
-            label="Harga Tahunan (Rp)"
-            name="priceYearly"
-            type="number"
-            min={0}
-            step="1000"
-            defaultValue={initialPriceYearly ?? ''}
-          />
-        </div>
-      </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="description" className="text-sm font-medium text-foreground">
-          Deskripsi
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          rows={3}
-          defaultValue={initial?.description ?? undefined}
-          className="rounded-md border border-input bg-surface px-3 py-2 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium text-foreground">Fasilitas</legend>
-        <div className="flex flex-wrap gap-3">
-          {facilities.map((facility) => (
-            <label key={facility.id} className="flex items-center gap-2 text-sm text-foreground-muted">
-              <input
-                type="checkbox"
-                name="facilityIds"
-                value={facility.id}
-                defaultChecked={initial?.facilityIds.includes(facility.id)}
-                className="h-4 w-4 rounded border-input"
+          <FormGrid columns={3}>
+            {EXTRA_CYCLES.map((entry) => (
+              <CurrencyInput
+                key={entry.name}
+                label={entry.label}
+                name={entry.name}
+                defaultValue={findPrice(entry.cycle, entry.interval) ?? ''}
               />
-              {facility.name}
-            </label>
-          ))}
-          {facilities.length === 0 && (
-            <p className="text-sm text-foreground-subtle">Belum ada fasilitas — tambahkan di menu Fasilitas.</p>
+            ))}
+          </FormGrid>
+        </FormCard>
+
+        <FormCard title="Detail & Fasilitas" description="Tampil di halaman publik kamar.">
+          <Textarea
+            name="description"
+            label="Deskripsi"
+            defaultValue={initial?.description ?? undefined}
+          />
+
+          {facilities.length > 0 ? (
+            FACILITY_GROUPS.map(({ category, label }) => {
+              const items = facilities.filter((facility) => facility.category === category);
+              if (items.length === 0) return null;
+
+              return (
+                <ChipGroup key={category} label={label}>
+                  {items.map((facility) => (
+                    <ChipToggle
+                      key={facility.id}
+                      name="facilityIds"
+                      value={facility.id}
+                      label={facility.name}
+                      defaultChecked={initial?.facilityIds.includes(facility.id) ?? false}
+                    />
+                  ))}
+                </ChipGroup>
+              );
+            })
+          ) : (
+            <p className="text-sm text-foreground-muted">
+              Belum ada fasilitas — tambahkan di menu Fasilitas.
+            </p>
           )}
-        </div>
-      </fieldset>
+        </FormCard>
 
-      <label className="flex items-center gap-2 text-sm text-foreground-muted">
-        <input
-          type="checkbox"
-          name="isActive"
-          value="true"
-          defaultChecked={initial?.isActive ?? true}
-          className="h-4 w-4 rounded border-input"
-        />
-        Aktif (tampil di website publik)
-      </label>
+        <FormCard title="Status" description="Kamar nonaktif tidak muncul di website publik.">
+          <Checkbox
+            name="isActive"
+            value="true"
+            defaultChecked={initial?.isActive ?? true}
+            label="Aktif"
+            hint="Tampil di website publik dan bisa dipakai untuk kontrak baru."
+          />
+        </FormCard>
 
-      {state.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
-      )}
+        <FormError message={state.error} />
 
-      <Button type="submit" isLoading={isPending} className="self-start">
-        {submitLabel}
-      </Button>
+        <FormStickyBar secondary="Perubahan langsung terlihat di halaman publik kamar.">
+          <Button type="submit" isLoading={isPending}>
+            {submitLabel}
+          </Button>
+        </FormStickyBar>
+      </FormLayout>
     </form>
   );
 }

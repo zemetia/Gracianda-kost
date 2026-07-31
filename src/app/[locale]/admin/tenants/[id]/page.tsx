@@ -2,8 +2,10 @@ import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { MetricInline } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { formatDate } from '@/lib/utils';
 import { tenantService } from '@/services/tenant.service';
 import { attachmentService } from '@/services/attachment.service';
 
@@ -44,23 +46,22 @@ export default async function TenantDetailPage({ params }: Props) {
         {tenant.isBlacklisted && <Badge variant="destructive">Blacklist</Badge>}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Data Penyewa</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <Typography variant="muted">Pekerjaan</Typography>
-            <Typography variant="p">{tenant.occupation ?? '—'}</Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Kendaraan</Typography>
-            <Typography variant="p">
-              {tenant.vehicleType ?? '—'} {tenant.vehiclePlate ? `(${tenant.vehiclePlate})` : ''}
-            </Typography>
-          </div>
-        </CardContent>
-      </Card>
+      <section>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+          Data Penyewa
+        </h3>
+        <div className="mt-3">
+          <MetricInline label="Pekerjaan" value={tenant.occupation ?? '—'} />
+          <MetricInline
+            label="Kendaraan"
+            value={
+              tenant.vehicleType
+                ? `${tenant.vehicleType}${tenant.vehiclePlate ? ` (${tenant.vehiclePlate})` : ''}`
+                : '—'
+            }
+          />
+        </div>
+      </section>
 
       <Card>
         <CardHeader>
@@ -100,8 +101,8 @@ export default async function TenantDetailPage({ params }: Props) {
                   {contract.contractCode}
                 </Typography>
                 <Typography variant="muted">
-                  Kamar {contract.room.number} · {contract.startDate.toLocaleDateString('id-ID')}
-                  {contract.actualEndDate ? ` – ${contract.actualEndDate.toLocaleDateString('id-ID')}` : ''}
+                  Kamar {contract.room.number} · {formatDate(contract.startDate, 'id-ID')}
+                  {contract.actualEndDate ? ` – ${formatDate(contract.actualEndDate, 'id-ID')}` : ''}
                 </Typography>
               </div>
               <Badge variant={contract.status === 'ACTIVE' ? 'success' : 'outline'}>

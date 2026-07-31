@@ -1,9 +1,9 @@
 import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { ROLE_LABEL } from '@/config/roles';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
+import { formatDate } from '@/lib/utils';
 import { userService } from '@/services/user.service';
 
 import { createUserAction } from './actions';
@@ -23,30 +23,28 @@ export default async function UsersPage() {
         </Typography>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tambah Pengguna</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="flex flex-col gap-6 border-t border-border pt-8">
+        <h3 className="text-base font-semibold text-foreground">Tambah Pengguna</h3>
+        <div className="max-w-4xl">
           <UserForm action={createUserAction} submitLabel="Buat Pengguna" passwordRequired />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <section className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nama</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Dibuat</th>
+          <thead>
+            <tr className="border-b border-border text-left">
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Nama</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Email</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Role</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Status</th>
+              <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">Dibuat</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {users.map((user) => (
-              <tr key={user.id}>
-                <td className="px-4 py-3 font-medium text-foreground">
+              <tr key={user.id} className="border-b border-border">
+                <td className="py-2.5 pr-4 font-medium text-foreground">
                   <Link href={`/admin/users/${user.id}`} className="hover:underline">
                     {user.name ?? '—'}
                   </Link>
@@ -54,25 +52,25 @@ export default async function UsersPage() {
                     <span className="ml-2 text-xs text-foreground-subtle">(kamu)</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">{user.email}</td>
-                <td className="px-4 py-3">
+                <td className="py-2.5 pr-4 text-foreground-muted">{user.email}</td>
+                <td className="py-2.5 pr-4">
                   <Badge variant={user.role === 'SUPER_ADMIN' ? 'default' : 'secondary'}>
                     {ROLE_LABEL[user.role] ?? user.role}
                   </Badge>
                 </td>
-                <td className="px-4 py-3">
+                <td className="py-2.5 pr-4">
                   <Badge variant={user.isActive ? 'success' : 'destructive'}>
                     {user.isActive ? 'Aktif' : 'Nonaktif'}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">
-                  {user.createdAt.toLocaleDateString('id-ID')}
+                <td className="py-2.5 text-right tabular-nums text-foreground-muted">
+                  {formatDate(user.createdAt, 'id-ID')}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,29 +1,15 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-  DoorOpen,
-  Users,
-  TrendingUp,
-  Wrench,
-  ShieldAlert,
-  Sparkles,
-  Wallet,
-  Calendar,
-} from 'lucide-react';
-
 import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Typography } from '@/components/ui/Typography';
+import { MetricBlock, MetricInline, MetricRow } from '@/components/ui/Metric';
 import { getSession } from '@/lib/auth';
-import { cn } from '@/lib/cn';
 import { getPropertyScope } from '@/lib/property-scope';
+import { formatDate, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '@/lib/utils';
 import { dashboardService } from '@/services/dashboard.service';
-import { Link } from '@/i18n/navigation';
 
 import { ActionQueue } from './ActionQueue';
 import { RevenueChart } from './RevenueChart';
 
-// These mirror the layout guards of the pages each widget links to
-// (contracts/layout.tsx, master-data/layout.tsx, …) — a tile that leads to
+// These mirror the layout guards of the pages each metric links to
+// (contracts/layout.tsx, master-data/layout.tsx, …) — a metric that leads to
 // <Forbidden /> is a broken promise, not a permission check.
 const CAN_SEE_FINANCE = ['SUPER_ADMIN', 'KEUANGAN'];
 const CAN_SEE_MAINTENANCE = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
@@ -31,40 +17,10 @@ const CAN_SEE_INCIDENTS = ['SUPER_ADMIN', 'SECURITY', 'OPERASIONAL'];
 const CAN_SEE_ROOMS = ['SUPER_ADMIN', 'OPERASIONAL'];
 const CAN_SEE_CONTRACTS = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
 
-// Every number on this dashboard is a question ("which ones?"), so every tile
-// links to the list that answers it.
-function StatTile({
-  label,
-  value,
-  icon: Icon,
-  href,
-  colorClass = 'text-primary bg-primary-subtle',
-}: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  href: string;
-  colorClass?: string;
-}) {
-  return (
-    <Link href={href} className="group focus-visible:outline-none">
-      <Card className="overflow-hidden hover:shadow-md transition-all duration-200 border-border/80 group-hover:border-primary/30 group-focus-visible:ring-2 group-focus-visible:ring-ring h-full">
-        <CardContent className="flex items-center justify-between p-6">
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <Typography variant="muted" className="text-xs uppercase tracking-wider font-semibold truncate">
-              {label}
-            </Typography>
-            <Typography variant="h3" className="font-bold text-foreground truncate">
-              {value}
-            </Typography>
-          </div>
-          <div className={cn('p-3 rounded-xl shrink-0', colorClass)}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
+/** Percentage change, or null when there is no baseline to compare against. */
+function delta(current: number, previous: number): number | null {
+  if (previous <= 0) return null;
+  return ((current - previous) / previous) * 100;
 }
 
 interface Props {
@@ -104,35 +60,38 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   // period the number was computed from, not every paid invoice ever.
   const thisMonthScope = `&month=${now.getMonth() + 1}&year=${now.getFullYear()}`;
 
-  const formattedDate = new Date().toLocaleDateString('id-ID', {
+  const formattedDate = formatDate(now, 'id-ID', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
+  // The trend already holds the previous period, so the comparison costs no
+  // extra query. A property onboarded this month has no baseline → null, not 0%.
+  const previousRevenue = revenueTrend.at(-2)?.total ?? 0;
+  const revenueDelta = delta(revenue, previousRevenue);
+  const trendTotal = revenueTrend.reduce((sum, point) => sum + point.total, 0);
+
+  const occupancy = roomStats.total > 0 ? (roomStats.occupied / roomStats.total) * 100 : null;
+
   return (
-    <div className="flex flex-col gap-8">
-      {/* Premium Welcome Banner */}
-      <div className="rounded-2xl border border-gradient bg-card p-6 md:p-8 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="flex flex-col gap-12">
+      {/* Page head — typography, not a banner card */}
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-primary-subtle text-primary border-primary/20 font-bold uppercase tracking-wider text-[10px] px-2 py-0.5">
-              {role.replace('_', ' ')}
-            </Badge>
-          </div>
-          <Typography variant="h2" className="text-foreground font-bold tracking-tight">
-            Halo, {userName}! 👋
-          </Typography>
-          <Typography variant="muted" className="text-sm max-w-xl leading-relaxed">
-            Selamat datang kembali di portal pengelolaan Gracianda House. Berikut adalah rangkuman performa operasional Anda.
-          </Typography>
+          <Badge variant="outline" className="w-fit text-[10px] uppercase tracking-wide">
+            {role.replace('_', ' ')}
+          </Badge>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Halo, {userName}
+          </h1>
+          <p className="max-w-xl text-sm leading-relaxed text-foreground-muted">
+            Rangkuman operasional Gracianda House hari ini.
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-foreground-muted font-medium bg-surface-raised px-4 py-2.5 rounded-xl border border-border shrink-0">
-          <Calendar className="h-4 w-4 text-primary shrink-0" />
-          <span>{formattedDate}</span>
-        </div>
-      </div>
+        <p className="text-xs text-foreground-muted">{formattedDate}</p>
+      </header>
 
       {/* Work list first, numbers second — the admin opens this page to find out
           what to do, not to admire totals. */}
@@ -145,106 +104,140 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         showRooms={CAN_SEE_ROOMS.includes(role)}
       />
 
-      {/* Statistics Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatTile
-          label="Total Unit"
-          value={String(roomStats.total)}
-          icon={DoorOpen}
-          href={`/admin/master-data/rooms${roomScope}`}
-          colorClass="text-primary bg-primary-subtle"
-        />
-        <StatTile
-          label="Unit Terisi"
-          value={String(roomStats.occupied)}
-          icon={Users}
-          href={`/admin/master-data/rooms?occupancy=occupied${scope}`}
-          colorClass="text-success bg-success-subtle"
-        />
-        <StatTile
-          label="Unit Kosong"
-          value={String(roomStats.available)}
-          icon={Sparkles}
-          href={`/admin/master-data/rooms?occupancy=available${scope}`}
-          colorClass="text-warning bg-warning-subtle"
-        />
-        {showFinance && (
-          <StatTile
+      {/* Hero figure — the one number this page exists for */}
+      {showFinance && (
+        <section className="border-y border-border py-8">
+          <MetricBlock
             label="Pendapatan Bulan Ini"
-            value={`Rp ${revenue.toLocaleString('id-ID')}`}
-            icon={Wallet}
+            value={formatNumber(revenue)}
+            prefix="Rp"
+            size="hero"
+            delta={revenueDelta}
+            period="vs bulan lalu"
+            meta={
+              previousRevenue > 0
+                ? `Bulan lalu ${formatRupiah(previousRevenue)}`
+                : 'Belum ada pembanding bulan lalu'
+            }
             href={`/admin/payments?bucket=PAID${thisMonthScope}${scope}`}
-            colorClass="text-success bg-success-subtle"
           />
-        )}
-        {showFinance && (
-          <StatTile
-            label="Pembayaran Terlambat"
-            value={String(actionQueue.overdue.count)}
-            icon={ShieldAlert}
-            href={`/admin/payments?bucket=OVERDUE${scope}`}
-            colorClass="text-destructive bg-destructive-subtle"
-          />
-        )}
-        {showMaintenance && (
-          <StatTile
-            label="Maintenance Bulan Ini"
-            value={`${maintenance.count} (Rp ${maintenance.totalCost.toLocaleString('id-ID')})`}
-            icon={Wrench}
-            href="/admin/maintenance"
-            colorClass="text-primary bg-primary-subtle"
-          />
-        )}
-      </div>
+        </section>
+      )}
 
-      {/* Revenue Trend Chart & Incident Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {showFinance && (
-          <Card className="lg:col-span-2 border-border/80 shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/40">
-              <div>
-                <CardTitle className="text-lg font-bold text-foreground">Tren Pendapatan (6 Bulan)</CardTitle>
-                <CardDescription className="text-xs mt-1">Visualisasi billing sewa yang terkumpul</CardDescription>
-              </div>
-              <div className="h-9 w-9 rounded-lg bg-success-subtle text-success flex items-center justify-center shrink-0">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <RevenueChart data={revenueTrend} />
-            </CardContent>
-          </Card>
-        )}
+      {/* Hunian */}
+      <MetricRow columns={4} stacked={showFinance}>
+        <MetricBlock
+          label="Total Unit"
+          value={formatNumber(roomStats.total)}
+          href={`/admin/master-data/rooms${roomScope}`}
+        />
+        <MetricBlock
+          label="Unit Terisi"
+          value={formatNumber(roomStats.occupied)}
+          href={`/admin/master-data/rooms?occupancy=occupied${scope}`}
+        />
+        <MetricBlock
+          label="Unit Kosong"
+          value={formatNumber(roomStats.available)}
+          href={`/admin/master-data/rooms?occupancy=available${scope}`}
+        />
+        <MetricBlock
+          label="Okupansi"
+          value={occupancy === null ? '—' : formatPercent(occupancy)}
+          tone={occupancy === null ? 'muted' : 'default'}
+          meta={
+            occupancy === null
+              ? 'Belum ada unit aktif'
+              : `${formatNumber(roomStats.occupied)} dari ${formatNumber(roomStats.total)} unit`
+          }
+        />
+      </MetricRow>
 
-        {showIncidents && (
-          <Card className="border-border/80 shadow-xs">
-            <CardHeader className="pb-4 border-b border-border/40">
-              <CardTitle className="text-lg font-bold text-foreground">Status Laporan Insiden</CardTitle>
-              <CardDescription className="text-xs mt-1">Laporan pengaduan keamanan dan operasional</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 pt-6">
-              <div className="flex items-center justify-between p-4 bg-surface-raised rounded-xl border border-border">
-                <span className="text-sm font-medium text-foreground-muted">Total Laporan</span>
-                <span className="text-lg font-bold text-foreground">{incidents.total}</span>
+      {/* Keuangan & operasional */}
+      {(showFinance || showMaintenance || showIncidents) && (
+        <MetricRow columns={3} stacked>
+          {showFinance && (
+            <MetricBlock
+              label="Pembayaran Terlambat"
+              value={formatNumber(actionQueue.overdue.count)}
+              tone={actionQueue.overdue.count > 0 ? 'destructive' : 'muted'}
+              meta={
+                actionQueue.overdue.count > 0
+                  ? `Nilai tunggakan ${formatRupiah(actionQueue.overdue.amount)}`
+                  : 'Tidak ada tunggakan'
+              }
+              href={`/admin/payments?bucket=OVERDUE${scope}`}
+            />
+          )}
+          {showMaintenance && (
+            <MetricBlock
+              label="Maintenance Bulan Ini"
+              value={formatNumber(maintenance.count)}
+              meta={`Total biaya ${formatRupiah(maintenance.totalCost)}`}
+              href="/admin/maintenance"
+            />
+          )}
+          {showIncidents && (
+            <MetricBlock
+              label="Insiden Bulan Ini"
+              value={formatNumber(incidents.total)}
+              tone={incidents.open > 0 ? 'destructive' : 'default'}
+              meta={`${formatNumber(incidents.open)} masih terbuka`}
+              href="/admin/incidents"
+            />
+          )}
+        </MetricRow>
+      )}
+
+      {/* Tren pendapatan — chart supports the number, never replaces it */}
+      {showFinance && (
+        <section className="flex flex-col gap-8 lg:flex-row lg:gap-12">
+          <div className="flex min-w-0 flex-1 flex-col gap-6">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                Tren Pendapatan · 6 Bulan
+              </p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+                <span className="mr-1 text-lg font-normal text-foreground-muted">Rp</span>
+                {formatNumber(trendTotal)}
+              </p>
+              <p className="mt-1 text-xs text-foreground-muted">
+                Rata-rata {formatRupiahShort(trendTotal / revenueTrend.length)} per bulan
+              </p>
+            </div>
+            <RevenueChart data={revenueTrend} />
+          </div>
+
+          {showIncidents && (
+            <div className="lg:w-72 lg:shrink-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                Status Laporan Insiden
+              </p>
+              <div className="mt-4">
+                <MetricInline label="Terbuka" value={formatNumber(incidents.open)} />
+                <MetricInline label="Proses" value={formatNumber(incidents.inProgress)} />
+                <MetricInline label="Selesai" value={formatNumber(incidents.resolved)} />
+                <MetricInline label="Total bulan ini" value={formatNumber(incidents.total)} />
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="flex flex-col items-center justify-center p-3 bg-destructive-subtle/40 rounded-xl border border-destructive/20 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-destructive">Terbuka</span>
-                  <span className="text-lg font-bold text-destructive mt-1">{incidents.open}</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-3 bg-warning-subtle/40 rounded-xl border border-warning/20 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-warning">Proses</span>
-                  <span className="text-lg font-bold text-warning mt-1">{incidents.inProgress}</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-3 bg-success-subtle/40 rounded-xl border border-success/20 text-center">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-success">Selesai</span>
-                  <span className="text-lg font-bold text-success mt-1">{incidents.resolved}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Insiden tanpa akses keuangan — panel berdiri sendiri */}
+      {!showFinance && showIncidents && (
+        <section>
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+            Status Laporan Insiden
+          </p>
+          <div className="mt-4 max-w-md">
+            <MetricInline label="Terbuka" value={formatNumber(incidents.open)} />
+            <MetricInline label="Proses" value={formatNumber(incidents.inProgress)} />
+            <MetricInline label="Selesai" value={formatNumber(incidents.resolved)} />
+            <MetricInline label="Total bulan ini" value={formatNumber(incidents.total)} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
