@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -8,16 +8,18 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Icon } from '@/components/ui/Icon';
 
 import { removeFacilityAction } from './actions';
+import { FacilityFormDialog } from './FacilityFormDialog';
 
 export interface FacilityCardProps {
   id: string;
   name: string;
   icon: string | null;
+  category: 'COMMON' | 'ROOM';
   /** Rooms + room types that reference this facility, shown before deleting. */
   usageCount: number;
 }
 
-export function FacilityCard({ id, name, icon, usageCount }: FacilityCardProps) {
+export function FacilityCard({ id, name, icon, category, usageCount }: FacilityCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -35,19 +37,35 @@ export function FacilityCard({ id, name, icon, usageCount }: FacilityCardProps) 
 
   return (
     <>
-      <div className="group flex items-center gap-3 rounded-xs border border-border bg-card px-3 py-2.5 shadow-sm transition-colors hover:border-border-strong">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xs bg-primary-subtle text-primary">
+      <div className="group border-border bg-card hover:border-border-strong flex items-center gap-3 rounded-xs border px-3 py-2.5 shadow-sm transition-colors">
+        <span className="bg-primary-subtle text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-xs">
           <Icon name={icon} />
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{name}</span>
-        <button
-          type="button"
-          onClick={() => setIsConfirming(true)}
-          aria-label={`Hapus ${name}`}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xs text-foreground-subtle transition-colors hover:bg-destructive-subtle hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <FacilityFormDialog
+            mode="edit"
+            facility={{ id, name, icon, category }}
+            renderTrigger={(open) => (
+              <button
+                type="button"
+                onClick={open}
+                aria-label={`Edit ${name}`}
+                className="text-foreground-subtle hover:bg-primary-subtle hover:text-primary focus-visible:ring-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => setIsConfirming(true)}
+            aria-label={`Hapus ${name}`}
+            className="text-foreground-subtle hover:bg-destructive-subtle hover:text-destructive focus-visible:ring-destructive flex h-7 w-7 shrink-0 items-center justify-center rounded-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <ConfirmDialog

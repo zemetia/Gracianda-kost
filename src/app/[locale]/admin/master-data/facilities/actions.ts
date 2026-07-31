@@ -43,6 +43,36 @@ export async function createFacilityAction(
   return {};
 }
 
+export async function updateFacilityAction(
+  id: string,
+  _prevState: FacilityFormState,
+  formData: FormData,
+): Promise<FacilityFormState> {
+  const session = await requireRole(CAN_MANAGE);
+  const parsed = facilitySchema.safeParse({
+    name: formData.get('name'),
+    icon: formData.get('icon') || undefined,
+    category: formData.get('category') ?? undefined,
+  });
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+
+  try {
+    await facilityService.update(id, parsed.data);
+    await auditService.log({
+      userId: session.user.id,
+      action: 'UPDATE',
+      entityType: 'Facility',
+      entityId: id,
+      after: parsed.data,
+    });
+  } catch {
+    return { error: 'Fasilitas dengan nama itu sudah ada' };
+  }
+
+  revalidatePath('/admin/master-data/facilities');
+  return {};
+}
+
 export async function removeFacilityAction(id: string): Promise<{ error?: string }> {
   const session = await requireRole(CAN_MANAGE);
 

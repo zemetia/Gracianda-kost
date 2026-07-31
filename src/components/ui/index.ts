@@ -10,6 +10,7 @@ export * from './DatePicker';
 export * from './Field';
 export * from './Form';
 export * from './Icon';
+export * from './IconPicker';
 export * from './Input';
 export * from './Metric';
 export * from './PageHeader';

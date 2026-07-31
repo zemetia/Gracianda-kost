@@ -1,9 +1,9 @@
-import { Card, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Typography } from '@/components/ui/Typography';
 import { facilityService } from '@/services/facility.service';
 
 import { FacilityCard } from './FacilityCard';
-import { NewFacilityForm } from './NewFacilityForm';
+import { FacilityFormDialog } from './FacilityFormDialog';
 
 const GROUPS = [
   { category: 'COMMON', label: 'Fasilitas Umum' },
@@ -15,18 +15,24 @@ export default async function FacilitiesPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <Typography variant="h2" className="mb-1">
-          Fasilitas
-        </Typography>
-        <Typography variant="muted">Master daftar fasilitas yang bisa dipasang ke kamar.</Typography>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <Typography variant="h2" className="mb-1">
+            Fasilitas
+          </Typography>
+          <Typography variant="muted">
+            Master daftar fasilitas yang bisa dipasang ke kamar.
+          </Typography>
+        </div>
+        <FacilityFormDialog
+          mode="create"
+          renderTrigger={(open) => (
+            <Button type="button" onClick={open}>
+              Tambah Fasilitas
+            </Button>
+          )}
+        />
       </div>
-
-      <Card>
-        <CardContent>
-          <NewFacilityForm />
-        </CardContent>
-      </Card>
 
       {facilities.length === 0 ? (
         <Typography variant="muted">Belum ada fasilitas.</Typography>
@@ -47,6 +53,7 @@ export default async function FacilitiesPage() {
                     id={facility.id}
                     name={facility.name}
                     icon={facility.icon}
+                    category={facility.category}
                     usageCount={facility._count.rooms + facility._count.roomTypes}
                   />
                 ))}
