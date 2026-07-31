@@ -1,4 +1,14 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
 import { formatNumber, formatRupiah } from '@/lib/utils';
@@ -50,55 +60,39 @@ export default async function CashReportPage({ searchParams }: Props) {
 
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-foreground">Breakdown per Metode</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Metode
-                </th>
-                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Tipe
-                </th>
-                <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Jumlah Transaksi
-                </th>
-                <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.byMethod.map((row) => (
-                <tr key={row.methodId ?? 'UNKNOWN'} className="border-b border-border">
-                  <td className="py-2.5 pr-4 font-medium text-foreground">{row.name}</td>
-                  <td className="py-2.5 pr-4 text-foreground-muted">
-                    {row.type ? TYPE_LABEL[row.type] : '—'}
-                  </td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatNumber(row.count)}</td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(row.total)}</td>
-                </tr>
-              ))}
-              {report.byMethod.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-foreground-muted">
-                    Tidak ada data untuk periode ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {report.byMethod.length > 0 && (
-              <tfoot>
-                <tr className="border-t border-border font-semibold">
-                  <td className="py-2.5 pr-4" colSpan={3}>
-                    Total
-                  </td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.totalReceived)}</td>
-                </tr>
-              </tfoot>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Metode</TableHead>
+              <TableHead>Tipe</TableHead>
+              <TableHead className="text-right">Jumlah Transaksi</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.byMethod.map((row) => (
+              <TableRow key={row.methodId ?? 'UNKNOWN'}>
+                <TableCell className="font-medium text-foreground">{row.name}</TableCell>
+                <TableCell className="text-foreground-muted">
+                  {row.type ? TYPE_LABEL[row.type] : '—'}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{formatNumber(row.count)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(row.total)}</TableCell>
+              </TableRow>
+            ))}
+            {report.byMethod.length === 0 && (
+              <TableEmpty colSpan={4}>Tidak ada data untuk periode ini.</TableEmpty>
             )}
-          </table>
-        </div>
+          </TableBody>
+          {report.byMethod.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={3}>Total</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalReceived)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
       </section>
     </div>
   );

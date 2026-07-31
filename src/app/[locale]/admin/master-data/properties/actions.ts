@@ -21,6 +21,7 @@ function parsePropertyForm(formData: FormData) {
     address: formData.get('address') || undefined,
     description: formData.get('description') || undefined,
     isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
+    facilityIds: formData.getAll('facilityIds'),
   });
 }
 

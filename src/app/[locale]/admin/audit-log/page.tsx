@@ -3,6 +3,15 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { ROLE_LABEL } from '@/config/roles';
 import { Link } from '@/i18n/navigation';
@@ -129,57 +138,51 @@ export default async function AuditLogPage({ searchParams }: Props) {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
-              <th>Waktu</th>
-              <th>Pengguna</th>
-              <th>Aksi</th>
-              <th>Entitas</th>
-              <th>Perubahan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.rows.map((row) => (
-              <tr key={row.id} className="border-b border-border align-top [&>td]:py-2.5 [&>td]:pr-4">
-                <td className="whitespace-nowrap tabular-nums text-foreground-muted">
-                  {formatDate(row.createdAt, 'id-ID', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </td>
-                <td>
-                  <div className="font-medium text-foreground">{row.user.name ?? row.user.email}</div>
-                  <div className="text-xs text-foreground-muted">
-                    {ROLE_LABEL[row.user.role] ?? row.user.role}
-                  </div>
-                </td>
-                <td>
-                  <Badge variant={ACTION_VARIANT[row.action]}>{ACTION_LABEL[row.action]}</Badge>
-                </td>
-                <td>
-                  <div className="font-medium text-foreground">{row.entityType}</div>
-                  <div className="font-mono text-xs text-foreground-muted">{row.entityId}</div>
-                </td>
-                <td className="max-w-lg pr-0">
-                  <AuditDiff before={row.before} after={row.after} />
-                </td>
-              </tr>
-            ))}
-            {result.rows.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-foreground-muted">
-                  Tidak ada catatan audit untuk filter ini.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Waktu</TableHead>
+            <TableHead>Pengguna</TableHead>
+            <TableHead>Aksi</TableHead>
+            <TableHead>Entitas</TableHead>
+            <TableHead>Perubahan</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {result.rows.map((row) => (
+            <TableRow key={row.id} className="align-top">
+              <TableCell className="whitespace-nowrap tabular-nums text-foreground-muted">
+                {formatDate(row.createdAt, 'id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </TableCell>
+              <TableCell>
+                <div className="font-medium text-foreground">{row.user.name ?? row.user.email}</div>
+                <div className="text-xs text-foreground-muted">
+                  {ROLE_LABEL[row.user.role] ?? row.user.role}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant={ACTION_VARIANT[row.action]}>{ACTION_LABEL[row.action]}</Badge>
+              </TableCell>
+              <TableCell>
+                <div className="font-medium text-foreground">{row.entityType}</div>
+                <div className="font-mono text-xs text-foreground-muted">{row.entityId}</div>
+              </TableCell>
+              <TableCell className="max-w-lg">
+                <AuditDiff before={row.before} after={row.after} />
+              </TableCell>
+            </TableRow>
+          ))}
+          {result.rows.length === 0 && (
+            <TableEmpty colSpan={5}>Tidak ada catatan audit untuk filter ini.</TableEmpty>
+          )}
+        </TableBody>
+      </Table>
 
       <div className="flex items-center justify-between text-sm text-foreground-muted">
         <span>

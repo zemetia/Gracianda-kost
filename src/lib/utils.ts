@@ -36,6 +36,13 @@ function formatDecimal(value: number): string {
   return value.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+/** Room/room type dimensions as "3 m x 4 m" — never a bare total sqm. Null when either side is missing. */
+export function formatRoomSize(lengthM: number | null, widthM: number | null): string | null {
+  if (!lengthM || !widthM) return null;
+  const dim = (value: number) => value.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+  return `${dim(lengthM)} m x ${dim(widthM)} m`;
+}
+
 export function truncate(str: string, maxLength: number, suffix = '…'): string {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength - suffix.length).trimEnd() + suffix;

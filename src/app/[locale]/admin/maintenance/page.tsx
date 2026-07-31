@@ -3,6 +3,15 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
@@ -93,49 +102,41 @@ export default async function MaintenancePage({ searchParams }: Props) {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Tanggal</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Scope</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Kategori</th>
-              <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">Biaya</th>
-              <th className="py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">Vendor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.map((record) => (
-              <tr key={record.id} className="border-b border-border">
-                <td className="py-2.5 pr-4 tabular-nums text-foreground-muted">
-                  {formatDate(record.date, 'id-ID')}
-                </td>
-                <td className="py-2.5 pr-4">
-                  <div className="flex flex-col gap-1">
-                    <Badge variant="outline" className="w-fit">
-                      {SCOPE_LABEL[record.scope]}
-                      {record.room ? ` — No. ${record.room.number} ${record.room.floor ? `(${record.room.floor.name})` : ''}` : ''}
-                    </Badge>
-                    <span className="text-xs text-foreground-muted">{record.property.name}</span>
-                  </div>
-                </td>
-                <td className="py-2.5 pr-4 text-foreground">{record.category}</td>
-                <td className="py-2.5 pr-4 text-right tabular-nums">
-                  {record.cost ? formatRupiah(record.cost.toNumber()) : '—'}
-                </td>
-                <td className="py-2.5 text-foreground-muted">{record.vendor ?? '—'}</td>
-              </tr>
-            ))}
-            {records.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-foreground-muted">
-                  Belum ada catatan maintenance.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tanggal</TableHead>
+            <TableHead>Scope</TableHead>
+            <TableHead>Kategori</TableHead>
+            <TableHead className="text-right">Biaya</TableHead>
+            <TableHead>Vendor</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((record) => (
+            <TableRow key={record.id}>
+              <TableCell className="tabular-nums text-foreground-muted">
+                {formatDate(record.date, 'id-ID')}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1">
+                  <Badge variant="outline" className="w-fit">
+                    {SCOPE_LABEL[record.scope]}
+                    {record.room ? ` — No. ${record.room.number} ${record.room.floor ? `(${record.room.floor.name})` : ''}` : ''}
+                  </Badge>
+                  <span className="text-xs text-foreground-muted">{record.property.name}</span>
+                </div>
+              </TableCell>
+              <TableCell className="text-foreground">{record.category}</TableCell>
+              <TableCell className="text-right tabular-nums">
+                {record.cost ? formatRupiah(record.cost.toNumber()) : '—'}
+              </TableCell>
+              <TableCell className="text-foreground-muted">{record.vendor ?? '—'}</TableCell>
+            </TableRow>
+          ))}
+          {records.length === 0 && <TableEmpty colSpan={5}>Belum ada catatan maintenance.</TableEmpty>}
+        </TableBody>
+      </Table>
     </div>
   );
 }

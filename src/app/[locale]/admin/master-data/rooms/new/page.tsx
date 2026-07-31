@@ -23,7 +23,7 @@ export default async function NewRoomPage({ searchParams }: Props) {
 
   const [floors, facilities, roomTypes] = await Promise.all([
     roomService.listFloors(propertyId),
-    facilityService.list(),
+    facilityService.listAssignable(),
     roomTypeService.getFormDefaults(propertyId),
   ]);
 

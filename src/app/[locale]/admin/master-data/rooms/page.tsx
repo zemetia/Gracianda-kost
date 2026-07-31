@@ -140,86 +140,74 @@ export default async function RoomsPage({ searchParams }: Props) {
             </Card>
           )}
 
-          {/* Rooms / Units List */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
-                  <th>Nomor/Nama Unit</th>
-                  <th>Lantai</th>
-                  <th>Tipe</th>
-                  <th className="text-right">Harga / Bulan</th>
-                  <th>Okupansi</th>
-                  <th>Status</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rooms.map((room) => (
-                  <tr key={room.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
-                    <td className="font-medium text-foreground">{room.number}</td>
-                    <td className="text-foreground-muted">{room.floor?.name || '—'}</td>
-                    <td className="text-foreground-muted">
-                      {room.roomType ? (
-                        <Link
-                          href={`/admin/master-data/room-types/${room.roomType.id}`}
-                          className="hover:text-foreground hover:underline"
-                        >
-                          {room.roomType.name}
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="text-right tabular-nums">
-                      {formatRupiah(room.price.toNumber())}
-                    </td>
-                    <td>
-                      <Badge variant={room.contracts.length > 0 ? 'destructive' : 'success'}>
-                        {room.contracts.length > 0 ? 'Terisi' : 'Tersedia'}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Badge variant={room.isActive ? 'success' : 'outline'}>
-                        {room.isActive ? 'Aktif' : 'Nonaktif'}
-                      </Badge>
-                    </td>
-                    <td className="pr-0 text-right">
-                      <div className="flex justify-end gap-2">
-                        <DuplicateRoomDialog
-                          roomId={room.id}
-                          roomNumber={room.number}
-                          floorId={room.floorId}
-                          floors={floors}
-                        />
-                        <Link href={`/admin/master-data/rooms/${room.id}`}>
-                          <Button variant="ghost" size="sm">
-                            Edit
-                          </Button>
-                        </Link>
-                        {room.isActive && (
-                          <form action={deactivateRoomAction.bind(null, room.id)}>
-                            <Button variant="ghost" size="sm" type="submit">
-                              Nonaktifkan
-                            </Button>
-                          </form>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {rooms.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-foreground-muted">
-                      {selectedOccupancy === 'all'
-                        ? 'Belum ada kamar atau unit hunian terdaftar.'
-                        : 'Tidak ada unit pada filter ini.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Rooms / Units Grid — entity cards read better than a table here: price,
+              occupancy, and status all matter at a glance, and units get duplicated
+              in batches rather than scanned row by row. */}
+          {rooms.length === 0 ? (
+            <p className="py-12 text-center text-sm text-foreground-muted">
+              {selectedOccupancy === 'all'
+                ? 'Belum ada kamar atau unit hunian terdaftar.'
+                : 'Tidak ada unit pada filter ini.'}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {rooms.map((room) => (
+                <Card key={room.id} className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold text-foreground">{room.number}</p>
+                      <p className="text-xs text-foreground-muted">{room.floor?.name || '—'}</p>
+                    </div>
+                    <Badge variant={room.isActive ? 'success' : 'outline'}>
+                      {room.isActive ? 'Aktif' : 'Nonaktif'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    {room.roomType ? (
+                      <Link
+                        href={`/admin/master-data/room-types/${room.roomType.id}`}
+                        className="truncate text-sm text-foreground-muted hover:text-foreground hover:underline"
+                      >
+                        {room.roomType.name}
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-foreground-muted">—</span>
+                    )}
+                    <Badge variant={room.contracts.length > 0 ? 'destructive' : 'success'}>
+                      {room.contracts.length > 0 ? 'Terisi' : 'Tersedia'}
+                    </Badge>
+                  </div>
+
+                  <p className="text-lg font-semibold tracking-tight tabular-nums text-foreground">
+                    {formatRupiah(room.price.toNumber())}
+                    <span className="ml-1 text-xs font-normal text-foreground-muted">/bulan</span>
+                  </p>
+
+                  <div className="mt-auto flex flex-wrap items-center justify-end gap-2 border-t border-border pt-3">
+                    <DuplicateRoomDialog
+                      roomId={room.id}
+                      roomNumber={room.number}
+                      floorId={room.floorId}
+                      floors={floors}
+                    />
+                    <Link href={`/admin/master-data/rooms/${room.id}`}>
+                      <Button variant="ghost" size="sm">
+                        Edit
+                      </Button>
+                    </Link>
+                    {room.isActive && (
+                      <form action={deactivateRoomAction.bind(null, room.id)}>
+                        <Button variant="ghost" size="sm" type="submit">
+                          Nonaktifkan
+                        </Button>
+                      </form>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

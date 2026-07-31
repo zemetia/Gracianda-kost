@@ -1,4 +1,14 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { canAccess } from '@/lib/auth';
@@ -93,55 +103,41 @@ export default async function FinancialReportPage({ searchParams }: Props) {
 
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-foreground">Breakdown per Kamar</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Kamar
-                </th>
-                <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Pendapatan
-                </th>
-                <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Biaya
-                </th>
-                <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Profit
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.byRoom.map((row) => (
-                <tr key={row.roomNumber} className="border-b border-border">
-                  <td className="py-2.5 pr-4 font-medium text-foreground">{row.roomNumber}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(row.revenue)}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums text-foreground-muted">
-                    {formatRupiah(row.cost)}
-                  </td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(row.revenue - row.cost)}</td>
-                </tr>
-              ))}
-              {report.byRoom.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-foreground-muted">
-                    Tidak ada data untuk periode ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {report.byRoom.length > 0 && (
-              <tfoot>
-                <tr className="border-t border-border font-semibold">
-                  <td className="py-2.5 pr-4">Total</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(report.totalRevenue)}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(report.totalCost)}</td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.profit)}</td>
-                </tr>
-              </tfoot>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Kamar</TableHead>
+              <TableHead className="text-right">Pendapatan</TableHead>
+              <TableHead className="text-right">Biaya</TableHead>
+              <TableHead className="text-right">Profit</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.byRoom.map((row) => (
+              <TableRow key={row.roomNumber}>
+                <TableCell className="font-medium text-foreground">{row.roomNumber}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(row.revenue)}</TableCell>
+                <TableCell className="text-right tabular-nums text-foreground-muted">
+                  {formatRupiah(row.cost)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(row.revenue - row.cost)}</TableCell>
+              </TableRow>
+            ))}
+            {report.byRoom.length === 0 && (
+              <TableEmpty colSpan={4}>Tidak ada data untuk periode ini.</TableEmpty>
             )}
-          </table>
-        </div>
+          </TableBody>
+          {report.byRoom.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell>Total</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalRevenue)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalCost)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(report.profit)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -151,50 +147,40 @@ export default async function FinancialReportPage({ searchParams }: Props) {
             Biaya operasional di luar maintenance — klik kategori untuk lihat detail catatannya.
           </Typography>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Kategori
-                </th>
-                <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Nominal
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.expenseByCategory.map((row) => (
-                <tr key={row.category} className="border-b border-border">
-                  <td className="py-2.5 pr-4 font-medium text-foreground">
-                    <Link
-                      href={`/admin/expenses?category=${row.category}`}
-                      className="hover:text-primary hover:underline"
-                    >
-                      {row.label}
-                    </Link>
-                  </td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(row.total)}</td>
-                </tr>
-              ))}
-              {report.expenseByCategory.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="py-8 text-center text-foreground-muted">
-                    Belum ada pengeluaran untuk periode ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {report.expenseByCategory.length > 0 && (
-              <tfoot>
-                <tr className="border-t border-border font-semibold">
-                  <td className="py-2.5 pr-4">Total</td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.expenseCost)}</td>
-                </tr>
-              </tfoot>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Kategori</TableHead>
+              <TableHead className="text-right">Nominal</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.expenseByCategory.map((row) => (
+              <TableRow key={row.category}>
+                <TableCell className="font-medium text-foreground">
+                  <Link
+                    href={`/admin/expenses?category=${row.category}`}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {row.label}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(row.total)}</TableCell>
+              </TableRow>
+            ))}
+            {report.expenseByCategory.length === 0 && (
+              <TableEmpty colSpan={2}>Belum ada pengeluaran untuk periode ini.</TableEmpty>
             )}
-          </table>
-        </div>
+          </TableBody>
+          {report.expenseByCategory.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell>Total</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(report.expenseCost)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
       </section>
     </div>
   );

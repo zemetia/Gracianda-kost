@@ -49,15 +49,25 @@ export const roomTypeService = {
   },
 
   create(data: RoomTypeInput) {
-    const { facilityIds, propertyId, name, description, sizeSqm, price, electricityMode, isActive } =
-      data;
+    const {
+      facilityIds,
+      propertyId,
+      name,
+      description,
+      lengthM,
+      widthM,
+      price,
+      electricityMode,
+      isActive,
+    } = data;
 
     return prisma.roomType.create({
       data: {
         propertyId,
         name,
         description: description || null,
-        sizeSqm: sizeSqm || null,
+        lengthM: lengthM || null,
+        widthM: widthM || null,
         price: price || null,
         electricityMode,
         isActive,
@@ -68,7 +78,8 @@ export const roomTypeService = {
   },
 
   update(id: string, data: RoomTypeInput) {
-    const { facilityIds, name, description, sizeSqm, price, electricityMode, isActive } = data;
+    const { facilityIds, name, description, lengthM, widthM, price, electricityMode, isActive } =
+      data;
 
     return prisma.$transaction(async (tx) => {
       await tx.roomTypeFacility.deleteMany({ where: { roomTypeId: id } });
@@ -79,7 +90,8 @@ export const roomTypeService = {
         data: {
           name,
           description: description || null,
-          sizeSqm: sizeSqm || null,
+          lengthM: lengthM || null,
+          widthM: widthM || null,
           price: price || null,
           electricityMode,
           isActive,
@@ -109,7 +121,8 @@ export const roomTypeService = {
       id: type.id,
       name: type.name,
       description: type.description,
-      sizeSqm: type.sizeSqm ? type.sizeSqm.toNumber() : null,
+      lengthM: type.lengthM ? type.lengthM.toNumber() : null,
+      widthM: type.widthM ? type.widthM.toNumber() : null,
       price: type.price ? type.price.toNumber() : null,
       electricityMode: type.electricityMode,
       facilityIds: type.facilities.map((f) => f.facilityId),

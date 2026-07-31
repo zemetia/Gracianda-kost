@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Typography } from '@/components/ui/Typography';
 import { useToast } from '@/hooks';
-import { formatRupiah, formatRupiahShort } from '@/lib/utils';
+import { formatRoomSize, formatRupiah, formatRupiahShort } from '@/lib/utils';
 import { buildWaLink } from '@/lib/whatsapp';
 import { siteConfig } from '@/config/site';
 
@@ -15,7 +15,8 @@ export interface PublicRoom {
   id: string;
   number: string;
   price: number;
-  sizeSqm: number | null;
+  lengthM: number | null;
+  widthM: number | null;
   description: string | null;
   roomTypeName: string | null;
   status: 'AVAILABLE' | 'OCCUPIED';
@@ -167,7 +168,7 @@ export function RoomFloorPlan({ floors }: { floors: PublicFloor[] }) {
                             {isAvailable ? 'Tersedia' : 'Terisi'}
                           </span>
                           <span className="text-xs text-foreground-subtle group-hover/room:text-foreground-muted font-mono">
-                            {room.sizeSqm ? `${room.sizeSqm}m²` : ''}
+                            {formatRoomSize(room.lengthM, room.widthM) ?? ''}
                           </span>
                         </div>
 
@@ -216,9 +217,9 @@ export function RoomFloorPlan({ floors }: { floors: PublicFloor[] }) {
                   {selectedRoom.roomTypeName && (
                     <Badge variant="outline">{selectedRoom.roomTypeName}</Badge>
                   )}
-                  {selectedRoom.sizeSqm && (
+                  {formatRoomSize(selectedRoom.lengthM, selectedRoom.widthM) && (
                     <Typography variant="small" className="text-foreground-muted">
-                      Dimensi: ± {selectedRoom.sizeSqm} m²
+                      Dimensi: {formatRoomSize(selectedRoom.lengthM, selectedRoom.widthM)}
                     </Typography>
                   )}
                 </div>
@@ -408,7 +409,8 @@ export function RoomFloorPlan({ floors }: { floors: PublicFloor[] }) {
                 leftIcon={<Copy className="h-4 w-4" />}
                 onClick={() => {
                   const statusText = selectedRoom.status === 'AVAILABLE' ? 'Tersedia' : 'Terisi';
-                  const sizeText = selectedRoom.sizeSqm ? ` (± ${selectedRoom.sizeSqm} m²)` : '';
+                  const roomSize = formatRoomSize(selectedRoom.lengthM, selectedRoom.widthM);
+                  const sizeText = roomSize ? ` (${roomSize})` : '';
                   
                   let priceInfo = '';
                   if (selectedRoom.prices && selectedRoom.prices.length > 0) {

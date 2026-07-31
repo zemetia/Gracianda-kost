@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { facilityService } from '@/services/facility.service';
 import { propertyService } from '@/services/property.service';
 import { updatePropertyAction } from '../actions';
 import { PropertyForm } from '../PropertyForm';
@@ -10,9 +11,14 @@ interface Props {
 
 export default async function EditPropertyPage({ params }: Props) {
   const { id } = await params;
-  const property = await propertyService.getById(id);
+  const [property, facilities] = await Promise.all([
+    propertyService.getById(id),
+    facilityService.list(),
+  ]);
 
   if (!property) notFound();
+
+  const commonFacilities = facilities.filter((facility) => facility.category === 'COMMON');
 
   return (
     <div className="flex max-w-5xl flex-col gap-8">
@@ -25,6 +31,7 @@ export default async function EditPropertyPage({ params }: Props) {
 
       <PropertyForm
         action={updatePropertyAction.bind(null, id)}
+        facilities={commonFacilities}
         initial={{
           name: property.name,
           code: property.code,
@@ -32,6 +39,7 @@ export default async function EditPropertyPage({ params }: Props) {
           address: property.address,
           description: property.description,
           isActive: property.isActive,
+          facilityIds: property.facilities.map((f) => f.facilityId),
         }}
         submitLabel="Simpan Perubahan"
       />

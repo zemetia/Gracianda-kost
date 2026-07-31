@@ -18,13 +18,7 @@ import type { RoomTypeFormState } from './actions';
 interface Facility {
   id: string;
   name: string;
-  category: 'COMMON' | 'ROOM';
 }
-
-const FACILITY_GROUPS = [
-  { category: 'ROOM', label: 'Fasilitas Kamar' },
-  { category: 'COMMON', label: 'Fasilitas Umum' },
-] as const;
 
 interface RoomTypeFormProps {
   action: (prevState: RoomTypeFormState, formData: FormData) => Promise<RoomTypeFormState>;
@@ -33,7 +27,8 @@ interface RoomTypeFormProps {
   initial?: {
     name: string;
     description: string | null;
-    sizeSqm: number | null;
+    lengthM: number | null;
+    widthM: number | null;
     price: number | null;
     electricityMode: ElectricityMode;
     isActive: boolean;
@@ -66,24 +61,37 @@ export function RoomTypeForm({
           title="Identitas Tipe"
           description="Nama yang dipakai admin saat membuat kamar — mis. Tipe A, Deluxe AC."
         >
+          <Input
+            label="Nama Tipe"
+            name="name"
+            required
+            className="sm:max-w-sm"
+            defaultValue={initial?.name}
+            error={state.fieldErrors?.name?.[0]}
+          />
+
           <FormGrid columns={2}>
             <Input
-              label="Nama Tipe"
-              name="name"
-              required
-              defaultValue={initial?.name}
-              error={state.fieldErrors?.name?.[0]}
-            />
-            <Input
-              label="Ukuran"
-              name="sizeSqm"
+              label="Panjang"
+              name="lengthM"
               type="number"
               min={0}
               step="0.1"
-              rightAddon="m²"
+              rightAddon="m"
               inputClassName="text-right tabular-nums"
-              defaultValue={initial?.sizeSqm ?? undefined}
-              error={state.fieldErrors?.sizeSqm?.[0]}
+              defaultValue={initial?.lengthM ?? undefined}
+              error={state.fieldErrors?.lengthM?.[0]}
+            />
+            <Input
+              label="Lebar"
+              name="widthM"
+              type="number"
+              min={0}
+              step="0.1"
+              rightAddon="m"
+              inputClassName="text-right tabular-nums"
+              defaultValue={initial?.widthM ?? undefined}
+              error={state.fieldErrors?.widthM?.[0]}
             />
           </FormGrid>
 
@@ -141,24 +149,17 @@ export function RoomTypeForm({
           description="Berlaku untuk semua kamar bertipe ini — kecuali kamar itu mengisi fasilitasnya sendiri."
         >
           {facilities.length > 0 ? (
-            FACILITY_GROUPS.map(({ category, label }) => {
-              const items = facilities.filter((facility) => facility.category === category);
-              if (items.length === 0) return null;
-
-              return (
-                <ChipGroup key={category} label={label}>
-                  {items.map((facility) => (
-                    <ChipToggle
-                      key={facility.id}
-                      name="facilityIds"
-                      value={facility.id}
-                      label={facility.name}
-                      defaultChecked={initial?.facilityIds.includes(facility.id) ?? false}
-                    />
-                  ))}
-                </ChipGroup>
-              );
-            })
+            <ChipGroup label="Fasilitas Kamar">
+              {facilities.map((facility) => (
+                <ChipToggle
+                  key={facility.id}
+                  name="facilityIds"
+                  value={facility.id}
+                  label={facility.name}
+                  defaultChecked={initial?.facilityIds.includes(facility.id) ?? false}
+                />
+              ))}
+            </ChipGroup>
           ) : (
             <p className="text-sm text-foreground-muted">
               Belum ada fasilitas — tambahkan di menu Fasilitas.

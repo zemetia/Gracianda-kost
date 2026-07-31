@@ -1,5 +1,15 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
 import { Select } from '@/components/ui/Select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
 import { formatNumber, formatRupiah } from '@/lib/utils';
@@ -78,50 +88,38 @@ export default async function MaintenanceReportPage({ searchParams }: Props) {
 
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-foreground">Breakdown per Kamar/Gedung</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Lokasi
-                </th>
-                <th className="py-2 pr-4 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Jumlah
-                </th>
-                <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                  Total Biaya
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.byRoom.map((row) => (
-                <tr key={row.roomNumber} className="border-b border-border">
-                  <td className="py-2.5 pr-4 font-medium text-foreground">{row.roomNumber}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums text-foreground-muted">
-                    {formatNumber(row.count)}
-                  </td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(row.totalCost)}</td>
-                </tr>
-              ))}
-              {report.byRoom.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="py-8 text-center text-foreground-muted">
-                    Tidak ada data untuk periode ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {report.byRoom.length > 0 && (
-              <tfoot>
-                <tr className="border-t border-border font-semibold">
-                  <td className="py-2.5 pr-4">Total</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">{formatNumber(report.count)}</td>
-                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.totalCost)}</td>
-                </tr>
-              </tfoot>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Lokasi</TableHead>
+              <TableHead className="text-right">Jumlah</TableHead>
+              <TableHead className="text-right">Total Biaya</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.byRoom.map((row) => (
+              <TableRow key={row.roomNumber}>
+                <TableCell className="font-medium text-foreground">{row.roomNumber}</TableCell>
+                <TableCell className="text-right tabular-nums text-foreground-muted">
+                  {formatNumber(row.count)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(row.totalCost)}</TableCell>
+              </TableRow>
+            ))}
+            {report.byRoom.length === 0 && (
+              <TableEmpty colSpan={3}>Tidak ada data untuk periode ini.</TableEmpty>
             )}
-          </table>
-        </div>
+          </TableBody>
+          {report.byRoom.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell>Total</TableCell>
+                <TableCell className="text-right tabular-nums">{formatNumber(report.count)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalCost)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
       </section>
     </div>
   );
