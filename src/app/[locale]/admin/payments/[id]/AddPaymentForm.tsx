@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/Button';
 import { CurrencyInput } from '@/components/ui/CurrencyInput';
 import { FormError, FormGrid } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
+import { Select, type SelectOption } from '@/components/ui/Select';
 
 import { addPartialPaymentAction, type AddPaymentFormState } from '../actions';
 
 const initialState: AddPaymentFormState = {};
 
-export function AddPaymentForm({ paymentId }: { paymentId: string }) {
+interface Props {
+  paymentId: string;
+  paymentMethods: SelectOption[];
+}
+
+export function AddPaymentForm({ paymentId, paymentMethods }: Props) {
   const [state, formAction, isPending] = useActionState(
     addPartialPaymentAction.bind(null, paymentId),
     initialState,
@@ -26,7 +32,13 @@ export function AddPaymentForm({ paymentId }: { paymentId: string }) {
           required
           error={state.fieldErrors?.amount?.[0]}
         />
-        <Input label="Metode" name="method" placeholder="Transfer BCA" error={state.fieldErrors?.method?.[0]} />
+        <Select
+          label="Metode"
+          name="paymentMethodId"
+          required
+          options={paymentMethods}
+          error={state.fieldErrors?.paymentMethodId?.[0]}
+        />
         <Input label="Catatan" name="note" error={state.fieldErrors?.note?.[0]} />
       </FormGrid>
 

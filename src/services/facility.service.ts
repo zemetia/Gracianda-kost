@@ -8,6 +8,14 @@ export const facilityService = {
     return prisma.facility.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   },
 
+  /** Adds how many rooms / room types reference the facility — deletion cascades to both. */
+  listWithUsage() {
+    return prisma.facility.findMany({
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+      include: { _count: { select: { rooms: true, roomTypes: true } } },
+    });
+  },
+
   create(data: FacilityInput) {
     return prisma.facility.create({ data });
   },

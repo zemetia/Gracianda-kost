@@ -7,6 +7,7 @@ import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
 import { formatDate, formatNumber, formatRupiah } from '@/lib/utils';
+import { paymentMethodService } from '@/services/payment-method.service';
 import {
   getPaymentBucket,
   getPaymentStatus,
@@ -53,7 +54,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
   const activeBucket: BucketFilter = isBucket(bucket) ? bucket : 'ALL';
 
   const scopedPropertyId = await getPropertyScope(propertyId);
-  const [payments, session] = await Promise.all([
+  const [payments, session, paymentMethods] = await Promise.all([
     paymentService.list({
       propertyId: scopedPropertyId,
       month: month ? Number(month) : undefined,
@@ -61,8 +62,10 @@ export default async function PaymentsPage({ searchParams }: Props) {
       q: q || undefined,
     }),
     getSession(),
+    paymentMethodService.listActive(),
   ]);
   const canManage = session && ['SUPER_ADMIN', 'KEUANGAN'].includes(session.user.role);
+  const paymentMethodOptions = paymentMethods.map((method) => ({ value: method.id, label: method.name }));
 
   const today = new Date();
   const rows = payments.map((payment) => ({
@@ -242,7 +245,12 @@ export default async function PaymentsPage({ searchParams }: Props) {
                         />
                       )}
                       {canManage && status !== 'PAID' && (
-                        <MarkPaidButton paymentId={payment.id} size="xs" label="Lunas" />
+                        <MarkPaidButton
+                          paymentId={payment.id}
+                          paymentMethods={paymentMethodOptions}
+                          size="xs"
+                          label="Lunas"
+                        />
                       )}
                     </div>
                   </td>

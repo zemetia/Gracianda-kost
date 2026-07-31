@@ -16,6 +16,7 @@ model User {
   sessions  Session[]
   auditLogs AuditLog[]
   reminders PaymentReminder[]
+  expenses  Expense[]
 
   @@map("users")
 }

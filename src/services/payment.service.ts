@@ -2,9 +2,11 @@
 // Components, Server Actions, or Route Handlers — never from 'use client' files.
 
 import { monthRange, periodsInRange } from '@/lib/billing';
+import { electricityCharge, electricityModeLabel, isMetered } from '@/lib/electricity';
 import { prisma } from '@/lib/prisma';
 import type { Payment } from '@/generated/prisma/client';
-import type { AddPartialPaymentInput } from '@/lib/validations';
+import type { AddPartialPaymentInput, RecordElectricityInput } from '@/lib/validations';
+import { settingService } from '@/services/setting.service';
 
 export type PaymentStatus = 'PENDING' | 'DUE' | 'OVERDUE' | 'PAID';
 
@@ -87,6 +89,7 @@ export const paymentService = {
       include: {
         contract: { include: { tenant: true, room: { include: { floor: true, property: true } } } },
         reminders: { orderBy: { sentAt: 'desc' }, take: 1 },
+        paymentMethod: true,
       },
     });
   },
@@ -94,7 +97,10 @@ export const paymentService = {
   getById(id: string) {
     return prisma.payment.findUnique({
       where: { id },
-      include: { contract: { include: { tenant: true, room: { include: { floor: true, property: true } } } } },
+      include: {
+        contract: { include: { tenant: true, room: { include: { floor: true, property: true } } } },
+        paymentMethod: true,
+      },
     });
   },
 
@@ -102,7 +108,10 @@ export const paymentService = {
     return prisma.payment.findMany({
       where: { contractId },
       orderBy: { periodStart: 'desc' },
-      include: { reminders: { orderBy: { sentAt: 'desc' }, take: 1, include: { user: true } } },
+      include: {
+        reminders: { orderBy: { sentAt: 'desc' }, take: 1, include: { user: true } },
+        paymentMethod: true,
+      },
     });
   },
 
@@ -132,6 +141,9 @@ export const paymentService = {
         periodEnd: period.end,
         periodMonth: period.start.getMonth() + 1,
         periodYear: period.start.getFullYear(),
+        // Electricity is added later, when the admin enters the meter reading —
+        // at generation time rent is the whole invoice.
+        rentAmount: contract.rentPrice,
         amountDue: contract.rentPrice,
         // Rent is due on the day the period opens — the tenant's own
         // anniversary date, not one global due day for the whole building.
@@ -190,11 +202,11 @@ export const paymentService = {
     );
   },
 
-  async markAsPaid(id: string) {
+  async markAsPaid(id: string, paymentMethodId: string) {
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id } });
     return prisma.payment.update({
       where: { id },
-      data: { amountPaid: payment.amountDue, paidAt: new Date() },
+      data: { amountPaid: payment.amountDue, paidAt: new Date(), paymentMethodId },
     });
   },
 
@@ -207,6 +219,42 @@ export const paymentService = {
     return prisma.paymentReminder.create({ data: { paymentId, userId, channel } });
   },
 
+  /**
+   * Records a meter reading on one invoice and re-prices it. Rejects rooms that
+   * are not METERED — a FREE or TOKEN unit that suddenly carries a kWh line is
+   * a data-entry mistake, not a charge the tenant agreed to.
+   *
+   * Re-entering a corrected reading is safe: amountDue is rebuilt from
+   * rentAmount rather than accumulated, and the tariff is re-snapshotted.
+   */
+  async recordElectricity(id: string, input: RecordElectricityInput) {
+    const payment = await prisma.payment.findUniqueOrThrow({
+      where: { id },
+      include: { contract: { include: { room: true } } },
+    });
+
+    const mode = payment.contract.room.electricityMode;
+    if (!isMetered(mode)) {
+      throw new Error(
+        `Kamar ini listriknya "${electricityModeLabel(mode)}" — tidak ditagih per kWh.`,
+      );
+    }
+
+    const rate = await settingService.getElectricityTariff();
+    const electricityAmount = electricityCharge(input.kwh, rate);
+    const rentAmount = Number(payment.rentAmount);
+
+    return prisma.payment.update({
+      where: { id },
+      data: {
+        electricityKwh: input.kwh,
+        electricityRate: rate,
+        electricityAmount,
+        amountDue: rentAmount + electricityAmount,
+      },
+    });
+  },
+
   addPartialPayment(id: string, input: AddPartialPaymentInput) {
     return prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUniqueOrThrow({ where: { id } });
@@ -217,7 +265,7 @@ export const paymentService = {
         where: { id },
         data: {
           amountPaid,
-          method: input.method,
+          paymentMethodId: input.paymentMethodId,
           note: input.note,
           paidAt: amountPaid >= amountDue ? new Date() : payment.paidAt,
         },

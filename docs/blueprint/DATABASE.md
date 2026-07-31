@@ -82,6 +82,24 @@ model User {
 
 ---
 
+## Room ↔ RoomType
+
+`RoomType` is a per-property template for units that are physically identical. A room may have no type at all; the relation is optional and `onDelete: SET NULL`.
+
+Two rules, both implemented once in [`src/lib/room-template.ts`](../../src/lib/room-template.ts) — never re-derive them in a page or a service:
+
+| Dimension | Rule |
+|---|---|
+| Fasilitas (`RoomFacility` vs `RoomTypeFacility`) | **Room menimpa type.** A room with ≥1 row of its own uses only its own; a room with none inherits the type's. Never a union. |
+| Foto/video (`Attachment` `ROOM` vs `ROOM_TYPE`) | Same override rule, evaluated independently of facilities. |
+| Harga (`Room.price`, `RoomPrice` vs `RoomType.price`, `RoomTypePrice`) | **Type is only a default.** It prefills the room form on the client; `Room.price`/`RoomPrice` stay the single source of truth for contracts and billing. Never read a type's price during billing. |
+
+`resolveInherited(own, fromType)` returns `{ items, source }` — `source` is what the admin UI labels as "mengikuti tipe".
+
+Duplication (`roomService.duplicate`) clones one room into up to 50 units: number generation lives in `generateRoomNumbers()`, price tiers/facilities/type/description/size carry over, attachments deliberately do not.
+
+---
+
 ## Prisma Client Singleton
 
 ```ts

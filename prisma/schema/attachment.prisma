@@ -1,10 +1,12 @@
 enum AttachmentEntity {
   ROOM
+  ROOM_TYPE
   TENANT
   CONTRACT
   PAYMENT
   MAINTENANCE
   INCIDENT
+  EXPENSE
 }
 
 enum AttachmentKind {

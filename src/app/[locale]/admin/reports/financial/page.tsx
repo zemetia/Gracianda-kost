@@ -1,5 +1,6 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
+import { Link } from '@/i18n/navigation';
 import { canAccess } from '@/lib/auth';
 import { formatNumber, formatPercent, formatRupiah } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
@@ -33,7 +34,9 @@ export default async function FinancialReportPage({ searchParams }: Props) {
         <Typography variant="h2" className="mb-1">
           Laporan Keuangan
         </Typography>
-        <Typography variant="muted">Pendapatan, biaya maintenance, dan profit per kamar.</Typography>
+        <Typography variant="muted">
+          Pendapatan, biaya maintenance &amp; pengeluaran operasional, dan profit per kamar.
+        </Typography>
       </div>
 
       <ReportFilterBar floors={floors} from={from} to={to} floorId={floorId} />
@@ -46,10 +49,11 @@ export default async function FinancialReportPage({ searchParams }: Props) {
           size="hero"
         />
         <MetricBlock
-          label="Total Biaya Maintenance"
+          label="Total Biaya"
           value={formatNumber(report.totalCost)}
           prefix="Rp"
           tone={report.totalCost > 0 ? 'default' : 'muted'}
+          meta={`Maintenance ${formatRupiah(report.maintenanceCost)} + Pengeluaran ${formatRupiah(report.expenseCost)}`}
         />
         <MetricBlock
           label="Profit"
@@ -59,6 +63,33 @@ export default async function FinancialReportPage({ searchParams }: Props) {
           meta={margin === null ? 'Belum ada pendapatan' : `Margin ${formatPercent(margin)}`}
         />
       </MetricRow>
+
+      <section className="flex flex-col gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Arus Kas Deposit</h3>
+          <Typography variant="muted" className="text-sm">
+            Uang titipan penyewa — dipisah dari pendapatan sewa karena harus dikembalikan saat check-out.
+          </Typography>
+        </div>
+        <MetricRow columns={3} stacked>
+          <MetricBlock label="Deposit Diterima" value={formatNumber(report.depositReceived)} prefix="Rp" size="secondary" />
+          <MetricBlock
+            label="Deposit Dikembalikan"
+            value={formatNumber(report.depositReturned)}
+            prefix="Rp"
+            size="secondary"
+            tone={report.depositReturned > 0 ? 'default' : 'muted'}
+          />
+          <MetricBlock
+            label="Deposit Bersih Dipegang"
+            value={formatNumber(report.netDeposit)}
+            prefix="Rp"
+            size="secondary"
+            tone={report.netDeposit < 0 ? 'destructive' : 'default'}
+            meta="Belum termasuk saldo deposit dari periode sebelum filter ini."
+          />
+        </MetricRow>
+      </section>
 
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-foreground">Breakdown per Kamar</h3>
@@ -106,6 +137,59 @@ export default async function FinancialReportPage({ searchParams }: Props) {
                   <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(report.totalRevenue)}</td>
                   <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(report.totalCost)}</td>
                   <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.profit)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Pengeluaran per Kategori</h3>
+          <Typography variant="muted" className="text-sm">
+            Biaya operasional di luar maintenance — klik kategori untuk lihat detail catatannya.
+          </Typography>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left">
+                <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                  Kategori
+                </th>
+                <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                  Nominal
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.expenseByCategory.map((row) => (
+                <tr key={row.category} className="border-b border-border">
+                  <td className="py-2.5 pr-4 font-medium text-foreground">
+                    <Link
+                      href={`/admin/expenses?category=${row.category}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {row.label}
+                    </Link>
+                  </td>
+                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(row.total)}</td>
+                </tr>
+              ))}
+              {report.expenseByCategory.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="py-8 text-center text-foreground-muted">
+                    Belum ada pengeluaran untuk periode ini.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {report.expenseByCategory.length > 0 && (
+              <tfoot>
+                <tr className="border-t border-border font-semibold">
+                  <td className="py-2.5 pr-4">Total</td>
+                  <td className="py-2.5 text-right tabular-nums">{formatRupiah(report.expenseCost)}</td>
                 </tr>
               </tfoot>
             )}

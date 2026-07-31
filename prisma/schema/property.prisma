@@ -1,3 +1,16 @@
+// How electricity is charged for a unit.
+//   FREE    — included in the rent, nothing extra is ever billed
+//   TOKEN   — prepaid; the tenant buys their own token, the kost bills nothing
+//   METERED — postpaid non-token; the admin reads the meter and the period is
+//             billed kWh × tarif (Setting `electricity.tariffPerKwh`)
+// Only METERED ever adds a line to an invoice — the other two exist so the
+// admin can see at a glance which units still need a meter reading.
+enum ElectricityMode {
+  FREE
+  TOKEN
+  METERED
+}
+
 enum PropertyType {
   KOST
   HOUSE
@@ -19,8 +32,10 @@ model Property {
 
   floors      Floor[]
   rooms       Room[]
+  roomTypes   RoomType[]
   maintenance MaintenanceRecord[]
   incidents   Incident[]
+  expenses    Expense[]
 
   @@map("properties")
 }
@@ -43,8 +58,12 @@ model Room {
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id])
   floorId     String?
-  floor       Floor?   @relation(fields: [floorId], references: [id])
+  floor       Floor?    @relation(fields: [floorId], references: [id])
+  roomTypeId  String?
+  roomType    RoomType? @relation(fields: [roomTypeId], references: [id])
   price       Decimal  @db.Decimal(12, 2)
+  // Authoritative for billing, like `price` — the type only prefills the form.
+  electricityMode ElectricityMode @default(FREE)
   sizeSqm     Decimal? @db.Decimal(5, 2)
   description String?
   isActive    Boolean  @default(true)
@@ -65,6 +84,60 @@ model Room {
 // service layer from whether the room has an active Contract (see
 // contractService / roomService.list / publicRoomService).
 
+// A shared template for rooms that are physically identical (Tipe A, Tipe
+// Deluxe, …). Two resolution rules, both implemented in resolveRoom*() in
+// room.service.ts — never re-derive them ad hoc:
+//   - facilities & photos: the ROOM OVERRIDES the type. A room with zero
+//     rows of its own inherits the type's; one row of its own means the
+//     type is ignored entirely for that dimension.
+//   - price & electricityMode: the type is only a DEFAULT that prefills the
+//     room form. Room.price / RoomPrice / Room.electricityMode stay the single
+//     source of truth for billing.
+model RoomType {
+  id          String   @id @default(cuid())
+  name        String
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  description String?
+  sizeSqm     Decimal? @db.Decimal(5, 2)
+  price       Decimal? @db.Decimal(12, 2)
+  // A DEFAULT only, same rule as `price`: it prefills the room form and is
+  // never read during billing — Room.electricityMode stays authoritative.
+  electricityMode ElectricityMode @default(FREE)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rooms      Room[]
+  facilities RoomTypeFacility[]
+  prices     RoomTypePrice[]
+
+  @@unique([propertyId, name])
+  @@map("room_types")
+}
+
+model RoomTypeFacility {
+  roomTypeId String
+  facilityId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([roomTypeId, facilityId])
+  @@map("room_type_facilities")
+}
+
+model RoomTypePrice {
+  id           String       @id @default(cuid())
+  roomTypeId   String
+  roomType     RoomType     @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  billingCycle BillingCycle
+  interval     Int          @default(1)
+  price        Decimal      @db.Decimal(12, 2)
+
+  @@unique([roomTypeId, billingCycle, interval])
+  @@map("room_type_prices")
+}
+
 enum FacilityCategory {
   COMMON
   ROOM
@@ -76,7 +149,8 @@ model Facility {
   icon     String?
   category FacilityCategory @default(ROOM)
 
-  rooms RoomFacility[]
+  rooms     RoomFacility[]
+  roomTypes RoomTypeFacility[]
 
   @@map("facilities")
 }

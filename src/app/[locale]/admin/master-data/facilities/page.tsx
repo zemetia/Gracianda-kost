@@ -1,9 +1,8 @@
-import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { facilityService } from '@/services/facility.service';
 
-import { removeFacilityAction } from './actions';
+import { FacilityCard } from './FacilityCard';
 import { NewFacilityForm } from './NewFacilityForm';
 
 const GROUPS = [
@@ -12,7 +11,7 @@ const GROUPS = [
 ] as const;
 
 export default async function FacilitiesPage() {
-  const facilities = await facilityService.list();
+  const facilities = await facilityService.listWithUsage();
 
   return (
     <div className="flex flex-col gap-8">
@@ -41,15 +40,15 @@ export default async function FacilitiesPage() {
               <Typography variant="h4" className="mb-3">
                 {label}
               </Typography>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {items.map((facility) => (
-                  <form key={facility.id} action={removeFacilityAction.bind(null, facility.id)}>
-                    <button type="submit" title="Klik untuk hapus">
-                      <Badge variant="outline" className="cursor-pointer hover:border-destructive hover:text-destructive">
-                        {facility.name} ×
-                      </Badge>
-                    </button>
-                  </form>
+                  <FacilityCard
+                    key={facility.id}
+                    id={facility.id}
+                    name={facility.name}
+                    icon={facility.icon}
+                    usageCount={facility._count.rooms + facility._count.roomTypes}
+                  />
                 ))}
               </div>
             </div>
