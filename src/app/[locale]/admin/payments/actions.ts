@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireAuth, requireRole } from '@/lib/auth';
-import { addPartialPaymentSchema } from '@/lib/validations';
+import { addPartialPaymentSchema, recordElectricitySchema } from '@/lib/validations';
 import { paymentService } from '@/services/payment.service';
 import { auditService } from '@/services/audit.service';
 import { attachmentService } from '@/services/attachment.service';
@@ -43,16 +43,16 @@ export async function logReminderAction(paymentId: string): Promise<void> {
   revalidatePath(`/admin/payments/${paymentId}`);
 }
 
-export async function markAsPaidAction(id: string): Promise<void> {
+export async function markAsPaidAction(id: string, paymentMethodId: string): Promise<void> {
   const session = await requireRole(CAN_MANAGE);
-  await paymentService.markAsPaid(id);
+  await paymentService.markAsPaid(id, paymentMethodId);
 
   await auditService.log({
     userId: session.user.id,
     action: 'UPDATE',
     entityType: 'Payment',
     entityId: id,
-    after: { paidAt: new Date() },
+    after: { paidAt: new Date(), paymentMethodId },
   });
 
   revalidatePath('/admin/payments');
@@ -73,7 +73,7 @@ export async function addPartialPaymentAction(
 
   const parsed = addPartialPaymentSchema.safeParse({
     amount: formData.get('amount'),
-    method: formData.get('method') || undefined,
+    paymentMethodId: formData.get('paymentMethodId'),
     note: formData.get('note') || undefined,
   });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
@@ -85,7 +85,50 @@ export async function addPartialPaymentAction(
     action: 'UPDATE',
     entityType: 'Payment',
     entityId: id,
-    after: { amountPaid: payment.amountPaid.toString(), method: parsed.data.method },
+    after: { amountPaid: payment.amountPaid.toString(), paymentMethodId: parsed.data.paymentMethodId },
+  });
+
+  revalidatePath('/admin/payments');
+  revalidatePath(`/admin/payments/${id}`);
+  return {};
+}
+
+export interface RecordElectricityFormState {
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+}
+
+/**
+ * Records the meter reading for one billing period. The rupiah is computed
+ * server-side from the tariff in Pengaturan — the admin only ever types kWh.
+ */
+export async function recordElectricityAction(
+  id: string,
+  _prevState: RecordElectricityFormState,
+  formData: FormData,
+): Promise<RecordElectricityFormState> {
+  const session = await requireRole(CAN_MANAGE);
+
+  const parsed = recordElectricitySchema.safeParse({ kwh: formData.get('kwh') });
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+
+  let payment;
+  try {
+    payment = await paymentService.recordElectricity(id, parsed.data);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menyimpan pemakaian listrik' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'UPDATE',
+    entityType: 'Payment',
+    entityId: id,
+    after: {
+      electricityKwh: parsed.data.kwh,
+      electricityAmount: payment.electricityAmount?.toString(),
+      amountDue: payment.amountDue.toString(),
+    },
   });
 
   revalidatePath('/admin/payments');

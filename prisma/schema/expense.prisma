@@ -1,0 +1,38 @@
+// General operating-cost ledger (renovasi, kebersihan, listrik, gaji ART,
+// wifi, dll). Deliberately excludes a MAINTENANCE category — repair costs
+// stay in MaintenanceRecord.cost so the two never double-count in
+// reportService.financial().
+enum ExpenseCategory {
+  RENOVATION
+  CLEANING
+  ELECTRICITY
+  WATER
+  WIFI_INTERNET
+  STAFF_SALARY
+  WASTE_MANAGEMENT
+  TAX_LICENSING
+  INSURANCE
+  SUPPLIES
+  MARKETING
+  OTHER
+}
+
+model Expense {
+  id         String          @id @default(cuid())
+  propertyId String
+  property   Property        @relation(fields: [propertyId], references: [id])
+  category   ExpenseCategory
+  date       DateTime
+  amount     Decimal         @db.Decimal(12, 2)
+  payee      String? // "PLN", "Budi (ART)", "Indihome", nama toko/vendor
+  note       String?
+
+  createdByUserId String
+  createdBy       User     @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([propertyId, date])
+  @@index([category])
+  @@map("expenses")
+}

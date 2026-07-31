@@ -5,14 +5,18 @@ import { MetricBlock, MetricInline, MetricRow } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
-import { formatDate, formatNumber } from '@/lib/utils';
+import { electricityModeLabel, isMetered } from '@/lib/electricity';
+import { formatDate, formatNumber, formatRupiah } from '@/lib/utils';
 import { attachmentService } from '@/services/attachment.service';
+import { paymentMethodService } from '@/services/payment-method.service';
 import { getPaymentStatus, paymentService } from '@/services/payment.service';
+import { settingService } from '@/services/setting.service';
 
 import { MarkPaidButton } from '../MarkPaidButton';
 import { PaymentStatusBadge } from '../PaymentStatusBadge';
 import { SendWaButton } from '../SendWaButton';
 import { AddPaymentForm } from './AddPaymentForm';
+import { ElectricityForm } from './ElectricityForm';
 import { PaymentProofUpload } from './PaymentProofUpload';
 
 interface Props {
@@ -26,17 +30,25 @@ const MONTH_NAMES_ID = [
 
 export default async function PaymentDetailPage({ params }: Props) {
   const { id } = await params;
-  const [payment, session, proofs] = await Promise.all([
+  const [payment, session, proofs, tariffPerKwh, paymentMethods] = await Promise.all([
     paymentService.getById(id),
     getSession(),
     attachmentService.listFor('PAYMENT', id),
+    settingService.getElectricityTariff(),
+    paymentMethodService.listActive(),
   ]);
   if (!payment) notFound();
+
+  const paymentMethodOptions = paymentMethods.map((method) => ({ value: method.id, label: method.name }));
 
   const canManage = session && ['SUPER_ADMIN', 'KEUANGAN'].includes(session.user.role);
   const status = getPaymentStatus(payment);
   const amountDue = payment.amountDue.toNumber();
   const amountPaid = payment.amountPaid.toNumber();
+
+  const electricityMode = payment.contract.room.electricityMode;
+  const electricityKwh = payment.electricityKwh?.toNumber() ?? null;
+  const electricityAmount = payment.electricityAmount?.toNumber() ?? 0;
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -68,14 +80,53 @@ export default async function PaymentDetailPage({ params }: Props) {
       </MetricRow>
 
       <div className="max-w-xl">
+        {electricityAmount > 0 && (
+          <>
+            <MetricInline label="Sewa" value={formatRupiah(payment.rentAmount.toNumber())} />
+            <MetricInline
+              label={`Listrik (${formatNumber(electricityKwh ?? 0)} kWh × ${formatRupiah(
+                payment.electricityRate?.toNumber() ?? tariffPerKwh,
+              )})`}
+              value={formatRupiah(electricityAmount)}
+            />
+          </>
+        )}
         <MetricInline label="Jatuh tempo" value={formatDate(payment.dueDate, 'id-ID')} />
         <MetricInline
           label="Lunas pada"
           value={payment.paidAt ? formatDate(payment.paidAt, 'id-ID') : '—'}
         />
-        {payment.method && <MetricInline label="Metode" value={payment.method} />}
+        {payment.paymentMethod && <MetricInline label="Metode" value={payment.paymentMethod.name} />}
         {payment.note && <MetricInline label="Catatan" value={payment.note} />}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Listrik</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isMetered(electricityMode) ? (
+            canManage ? (
+              <ElectricityForm
+                paymentId={payment.id}
+                tariffPerKwh={tariffPerKwh}
+                currentKwh={electricityKwh}
+              />
+            ) : (
+              <Typography variant="muted">
+                {electricityKwh === null
+                  ? 'Pemakaian periode ini belum dicatat.'
+                  : `${formatNumber(electricityKwh)} kWh — ${formatRupiah(electricityAmount)}.`}
+              </Typography>
+            )
+          ) : (
+            <Typography variant="muted">
+              Listrik kamar ini “{electricityModeLabel(electricityMode)}” — tidak ada tagihan listrik
+              pada periode ini.
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
 
       {(status === 'DUE' || status === 'OVERDUE') && (
         <Card>
@@ -105,8 +156,8 @@ export default async function PaymentDetailPage({ params }: Props) {
             <CardTitle>Aksi Pembayaran</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <MarkPaidButton paymentId={payment.id} />
-            <AddPaymentForm paymentId={payment.id} />
+            <MarkPaidButton paymentId={payment.id} paymentMethods={paymentMethodOptions} />
+            <AddPaymentForm paymentId={payment.id} paymentMethods={paymentMethodOptions} />
           </CardContent>
         </Card>
       )}

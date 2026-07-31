@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireRole } from '@/lib/auth';
-import { floorSchema, roomSchema } from '@/lib/validations';
+import { duplicateRoomSchema, floorSchema, roomSchema } from '@/lib/validations';
 import { roomService } from '@/services/room.service';
 import { attachmentService } from '@/services/attachment.service';
 import { auditService } from '@/services/audit.service';
@@ -20,9 +20,11 @@ function parseRoomForm(formData: FormData) {
     number: formData.get('number'),
     propertyId: formData.get('propertyId'),
     floorId: formData.get('floorId') || undefined,
+    roomTypeId: formData.get('roomTypeId') || undefined,
     price: formData.get('price'),
     sizeSqm: formData.get('sizeSqm') || undefined,
     description: formData.get('description') || undefined,
+    electricityMode: formData.get('electricityMode') || undefined,
     isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
     facilityIds: formData.getAll('facilityIds'),
     priceDaily: formData.get('priceDaily') || undefined,
@@ -96,6 +98,47 @@ export async function deactivateRoomAction(id: string): Promise<void> {
     after: { isActive: false },
   });
   revalidatePath('/admin/master-data/rooms');
+}
+
+export interface DuplicateRoomState {
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+  createdCount?: number;
+}
+
+export async function duplicateRoomAction(
+  roomId: string,
+  _prevState: DuplicateRoomState,
+  formData: FormData,
+): Promise<DuplicateRoomState> {
+  const session = await requireRole(CAN_MANAGE);
+  const parsed = duplicateRoomSchema.safeParse({
+    mode: formData.get('mode') || 'SEQUENCE',
+    count: formData.get('count') || undefined,
+    prefix: formData.get('prefix') || undefined,
+    startNumber: formData.get('startNumber') || undefined,
+    numbers: formData.get('numbers') || undefined,
+    floorId: formData.get('floorId') || undefined,
+  });
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+
+  let created;
+  try {
+    created = await roomService.duplicate(roomId, parsed.data);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menduplikasi kamar' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'CREATE',
+    entityType: 'Room',
+    entityId: roomId,
+    after: { duplicatedInto: created.map((room) => room.number) },
+  });
+
+  revalidatePath('/admin/master-data/rooms');
+  return { createdCount: created.length };
 }
 
 export interface FloorFormState {

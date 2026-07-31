@@ -1,0 +1,13 @@
+// Single-row-per-key application settings. Values are stored as strings and
+// parsed by settingService — a typed column per setting would mean a migration
+// every time the admin needs one more number.
+//
+// Known keys live in SETTING_KEYS (src/lib/settings.ts); nothing else may write
+// here, so "what settings exist" has exactly one answer.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

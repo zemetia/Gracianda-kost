@@ -9,6 +9,7 @@ import { roomService } from '@/services/room.service';
 import { propertyService } from '@/services/property.service';
 
 import { deactivateRoomAction } from './actions';
+import { DuplicateRoomDialog } from './DuplicateRoomDialog';
 import { NewFloorForm } from './NewFloorForm';
 
 type Occupancy = 'all' | 'occupied' | 'available';
@@ -121,20 +122,20 @@ export default async function RoomsPage({ searchParams }: Props) {
           {(selectedProperty.type === 'KOST' || selectedProperty.type === 'APARTMENT') && (
             <Card>
               <CardContent>
-                <Typography variant="h6" className="mb-3">
-                  Lantai
-                </Typography>
-                <div className="mb-4 flex flex-wrap gap-2">
+                <div className="flex items-center justify-between gap-4">
+                  <Typography variant="h6">Lantai</Typography>
+                  <NewFloorForm propertyId={selectedPropertyId} />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                   {floors.map((floor) => (
                     <Badge key={floor.id} variant="outline">
                       {floor.name}
                     </Badge>
                   ))}
                   {floors.length === 0 && (
-                    <Typography variant="muted">Belum ada lantai — tambahkan dulu di bawah.</Typography>
+                    <Typography variant="muted">Belum ada lantai — tambahkan dengan tombol di atas.</Typography>
                   )}
                 </div>
-                <NewFloorForm propertyId={selectedPropertyId} />
               </CardContent>
             </Card>
           )}
@@ -146,6 +147,7 @@ export default async function RoomsPage({ searchParams }: Props) {
                 <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
                   <th>Nomor/Nama Unit</th>
                   <th>Lantai</th>
+                  <th>Tipe</th>
                   <th className="text-right">Harga / Bulan</th>
                   <th>Okupansi</th>
                   <th>Status</th>
@@ -157,6 +159,18 @@ export default async function RoomsPage({ searchParams }: Props) {
                   <tr key={room.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
                     <td className="font-medium text-foreground">{room.number}</td>
                     <td className="text-foreground-muted">{room.floor?.name || '—'}</td>
+                    <td className="text-foreground-muted">
+                      {room.roomType ? (
+                        <Link
+                          href={`/admin/master-data/room-types/${room.roomType.id}`}
+                          className="hover:text-foreground hover:underline"
+                        >
+                          {room.roomType.name}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="text-right tabular-nums">
                       {formatRupiah(room.price.toNumber())}
                     </td>
@@ -172,6 +186,12 @@ export default async function RoomsPage({ searchParams }: Props) {
                     </td>
                     <td className="pr-0 text-right">
                       <div className="flex justify-end gap-2">
+                        <DuplicateRoomDialog
+                          roomId={room.id}
+                          roomNumber={room.number}
+                          floorId={room.floorId}
+                          floors={floors}
+                        />
                         <Link href={`/admin/master-data/rooms/${room.id}`}>
                           <Button variant="ghost" size="sm">
                             Edit
@@ -190,7 +210,7 @@ export default async function RoomsPage({ searchParams }: Props) {
                 ))}
                 {rooms.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-foreground-muted">
+                    <td colSpan={7} className="py-8 text-center text-foreground-muted">
                       {selectedOccupancy === 'all'
                         ? 'Belum ada kamar atau unit hunian terdaftar.'
                         : 'Tidak ada unit pada filter ini.'}

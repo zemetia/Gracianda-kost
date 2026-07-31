@@ -3,7 +3,15 @@
 // docs/plan/02-modules-features.md §9.
 
 import { prisma } from '@/lib/prisma';
-import type { IncidentCategory, IncidentStatus, MaintenanceScope, Prisma } from '@/generated/prisma/client';
+import type {
+  ExpenseCategory,
+  IncidentCategory,
+  IncidentStatus,
+  MaintenanceScope,
+  PaymentMethodType,
+  Prisma,
+} from '@/generated/prisma/client';
+import { expenseCategoryLabel } from '@/lib/expense';
 
 import { getPaymentStatus } from './payment.service';
 
@@ -47,8 +55,66 @@ export const reportService = {
       select: { cost: true, room: { select: { id: true, number: true } } },
     });
 
+    // Operating expenses (listrik, wifi, gaji staf, dll) — property-scoped
+    // only, never room-scoped, so drilling into a single kamar/lantai still
+    // shows the full property-wide expense total rather than zero.
+    const expenses = await prisma.expense.findMany({
+      where: {
+        ...(filter.from || filter.to
+          ? { date: { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) } }
+          : {}),
+        ...(filter.propertyId && { propertyId: filter.propertyId }),
+      },
+      select: { category: true, amount: true },
+    });
+
+    // Deposit is tenant money held in trust, not rental income — kept out of
+    // totalRevenue/profit and reported as its own cash-flow line so "laba"
+    // never gets inflated by money that has to be handed back at check-out.
+    // Received uses Contract.startDate (no separate receipt-date field yet);
+    // returned uses actualEndDate, set by contractService.checkout().
+    const depositDateFilter = (field: 'startDate' | 'actualEndDate') =>
+      filter.from || filter.to
+        ? { [field]: { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) } }
+        : {};
+
+    const [depositReceivedContracts, depositReturnedContracts] = await Promise.all([
+      prisma.contract.findMany({
+        where: {
+          deposit: { not: null },
+          ...depositDateFilter('startDate'),
+          ...(roomWhere && { room: roomWhere }),
+        },
+        select: { deposit: true },
+      }),
+      prisma.contract.findMany({
+        where: {
+          depositRefunded: { not: null },
+          ...depositDateFilter('actualEndDate'),
+          ...(roomWhere && { room: roomWhere }),
+        },
+        select: { depositRefunded: true },
+      }),
+    ]);
+
+    const depositReceived = depositReceivedContracts.reduce((sum, c) => sum + (c.deposit?.toNumber() ?? 0), 0);
+    const depositReturned = depositReturnedContracts.reduce(
+      (sum, c) => sum + (c.depositRefunded?.toNumber() ?? 0),
+      0,
+    );
+
     const totalRevenue = payments.reduce((sum, p) => sum + p.amountPaid.toNumber(), 0);
-    const totalCost = maintenance.reduce((sum, m) => sum + (m.cost?.toNumber() ?? 0), 0);
+    const maintenanceCost = maintenance.reduce((sum, m) => sum + (m.cost?.toNumber() ?? 0), 0);
+    const expenseCost = expenses.reduce((sum, e) => sum + e.amount.toNumber(), 0);
+    const totalCost = maintenanceCost + expenseCost;
+
+    const expenseByCategoryMap = new Map<ExpenseCategory, number>();
+    for (const e of expenses) {
+      expenseByCategoryMap.set(e.category, (expenseByCategoryMap.get(e.category) ?? 0) + e.amount.toNumber());
+    }
+    const expenseByCategory = Array.from(expenseByCategoryMap.entries())
+      .map(([category, total]) => ({ category, label: expenseCategoryLabel(category), total }))
+      .sort((a, b) => b.total - a.total);
 
     const byRoom = new Map<string, { roomNumber: string; revenue: number; cost: number }>();
     for (const p of payments) {
@@ -67,8 +133,63 @@ export const reportService = {
     return {
       totalRevenue,
       totalCost,
+      maintenanceCost,
+      expenseCost,
       profit: totalRevenue - totalCost,
+      depositReceived,
+      depositReturned,
+      netDeposit: depositReceived - depositReturned,
       byRoom: Array.from(byRoom.values()).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber)),
+      expenseByCategory,
+    };
+  },
+
+  /**
+   * Cash received per payment method for a period — used to reconcile
+   * physical cash and each bank account against what the system expects.
+   * Filters by `paidAt` (when money actually came in), not `dueDate` like
+   * `financial()`.
+   */
+  async cash(filter: ReportFilter = {}) {
+    const roomWhere = roomScopeWhere(filter);
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        amountPaid: { gt: 0 },
+        ...(filter.from || filter.to
+          ? { paidAt: { ...(filter.from && { gte: filter.from }), ...(filter.to && { lte: filter.to }) } }
+          : {}),
+        ...(roomWhere && { contract: { room: roomWhere } }),
+      },
+      select: {
+        amountPaid: true,
+        paymentMethod: { select: { id: true, name: true, type: true } },
+      },
+    });
+
+    const byMethod = new Map<
+      string,
+      { methodId: string | null; name: string; type: PaymentMethodType | null; total: number; count: number }
+    >();
+    for (const p of payments) {
+      const key = p.paymentMethod?.id ?? 'UNKNOWN';
+      const entry =
+        byMethod.get(key) ??
+        {
+          methodId: p.paymentMethod?.id ?? null,
+          name: p.paymentMethod?.name ?? 'Belum dipilih metode',
+          type: p.paymentMethod?.type ?? null,
+          total: 0,
+          count: 0,
+        };
+      entry.total += p.amountPaid.toNumber();
+      entry.count += 1;
+      byMethod.set(key, entry);
+    }
+
+    return {
+      totalReceived: payments.reduce((sum, p) => sum + p.amountPaid.toNumber(), 0),
+      byMethod: Array.from(byMethod.values()).sort((a, b) => a.name.localeCompare(b.name)),
     };
   },
 

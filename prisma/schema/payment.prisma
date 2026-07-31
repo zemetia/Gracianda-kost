@@ -17,12 +17,26 @@ model Payment {
   periodMonth Int // 1-12
   periodYear  Int
 
+  // amountDue is the TOTAL the tenant owes and stays the only figure
+  // getPaymentStatus() compares against. rentAmount is the rent half of it,
+  // kept so a meter reading can be corrected without losing the original rent:
+  //   amountDue = rentAmount + (electricityAmount ?? 0)
+  rentAmount Decimal   @db.Decimal(12, 2)
   amountDue  Decimal   @db.Decimal(12, 2)
   amountPaid Decimal   @default(0) @db.Decimal(12, 2)
   dueDate    DateTime
   paidAt     DateTime?
-  method     String? // "Transfer BCA", "Tunai"
-  note       String?
+
+  paymentMethodId String?
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  note            String?
+
+  // Only filled for rooms with electricityMode = METERED. electricityRate is a
+  // snapshot of the tariff at reading time — raising the tariff next month must
+  // not silently re-price invoices that were already sent.
+  electricityKwh    Decimal? @db.Decimal(10, 2)
+  electricityRate   Decimal? @db.Decimal(12, 2)
+  electricityAmount Decimal? @db.Decimal(12, 2)
 
   reminders PaymentReminder[]
 
@@ -32,7 +46,30 @@ model Payment {
   @@unique([contractId, periodStart])
   @@index([periodYear, periodMonth])
   @@index([dueDate])
+  @@index([paidAt])
   @@map("payments")
+}
+
+enum PaymentMethodType {
+  CASH
+  BANK
+  EWALLET
+}
+
+// Master data untuk metode pembayaran (Tunai, tiap rekening bank, e-wallet).
+// Soft-delete via isActive, bukan hard-delete seperti Facility — Payment
+// historis mereferensikannya, hard-delete akan menghapus jejak transaksi.
+model PaymentMethod {
+  id        String            @id @default(cuid())
+  name      String            @unique
+  type      PaymentMethodType @default(CASH)
+  isActive  Boolean           @default(true)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  payments Payment[]
+
+  @@map("payment_methods")
 }
 
 // Jejak penagihan: tanpa ini admin tidak tahu siapa yang sudah ditagih hari ini

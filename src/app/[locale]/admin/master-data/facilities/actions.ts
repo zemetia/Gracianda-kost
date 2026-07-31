@@ -43,9 +43,16 @@ export async function createFacilityAction(
   return {};
 }
 
-export async function removeFacilityAction(id: string): Promise<void> {
+export async function removeFacilityAction(id: string): Promise<{ error?: string }> {
   const session = await requireRole(CAN_MANAGE);
-  const removed = await facilityService.remove(id);
+
+  let removed;
+  try {
+    removed = await facilityService.remove(id);
+  } catch {
+    return { error: 'Fasilitas gagal dihapus' };
+  }
+
   await auditService.log({
     userId: session.user.id,
     action: 'DELETE',
@@ -54,4 +61,5 @@ export async function removeFacilityAction(id: string): Promise<void> {
     before: { name: removed.name, icon: removed.icon },
   });
   revalidatePath('/admin/master-data/facilities');
+  return {};
 }

@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { facilityService } from '@/services/facility.service';
 import { roomService } from '@/services/room.service';
 import { propertyService } from '@/services/property.service';
+import { roomTypeService } from '@/services/room-type.service';
 
 import { createRoomAction } from '../actions';
 import { RoomForm } from '../RoomForm';
@@ -20,9 +21,10 @@ export default async function NewRoomPage({ searchParams }: Props) {
   const property = await propertyService.getById(propertyId);
   if (!property) notFound();
 
-  const [floors, facilities] = await Promise.all([
+  const [floors, facilities, roomTypes] = await Promise.all([
     roomService.listFloors(propertyId),
     facilityService.list(),
+    roomTypeService.getFormDefaults(propertyId),
   ]);
 
   return (
@@ -39,6 +41,7 @@ export default async function NewRoomPage({ searchParams }: Props) {
         propertyId={propertyId}
         floors={floors}
         facilities={facilities}
+        roomTypes={roomTypes}
         submitLabel="Simpan Kamar/Unit"
       />
     </div>

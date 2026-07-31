@@ -11,10 +11,12 @@ import { facilityService } from '@/services/facility.service';
 import { roomService } from '@/services/room.service';
 import { attachmentService } from '@/services/attachment.service';
 import { contractService } from '@/services/contract.service';
+import { roomTypeService } from '@/services/room-type.service';
 
-import { updateRoomAction } from '../actions';
+import { MediaGallery } from '../../MediaGallery';
+import { removeRoomPhotoAction, updateRoomAction, uploadRoomPhotoAction } from '../actions';
+import { DuplicateRoomDialog } from '../DuplicateRoomDialog';
 import { RoomForm } from '../RoomForm';
-import { RoomPhotos } from './RoomPhotos';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -32,13 +34,24 @@ export default async function EditRoomPage({ params }: Props) {
 
   if (!room) notFound();
 
-  const [floors, facilities, attachments, history, activeContract] = await Promise.all([
-    roomService.listFloors(room.propertyId),
-    facilityService.list(),
-    attachmentService.listFor('ROOM', id),
-    roomService.getRoomHistory(id),
-    contractService.getActiveByRoom(id),
-  ]);
+  const [floors, facilities, roomTypes, ownAttachments, history, activeContract] = await Promise.all(
+    [
+      roomService.listFloors(room.propertyId),
+      facilityService.list(),
+      roomTypeService.getFormDefaults(room.propertyId),
+      attachmentService.listFor('ROOM', id),
+      roomService.getRoomHistory(id),
+      contractService.getActiveByRoom(id),
+    ],
+  );
+
+  // Same override rule as the public page: own media wins, otherwise the
+  // type's gallery is what visitors actually see for this unit.
+  const typeAttachments =
+    ownAttachments.length === 0 && room.roomTypeId
+      ? await attachmentService.listFor('ROOM_TYPE', room.roomTypeId)
+      : [];
+  const inheritsMedia = ownAttachments.length === 0 && typeAttachments.length > 0;
 
   const roomLabel = `No. ${room.number}${room.floor ? ` (${room.floor.name})` : ''}`;
 
@@ -80,9 +93,20 @@ export default async function EditRoomPage({ params }: Props) {
   return (
     <div className="flex max-w-5xl flex-col gap-8">
       <Card>
-        <CardHeader>
-          <CardTitle>Kamar {room.number} — {room.property.name}</CardTitle>
-          <CardDescription>{roomLabel}</CardDescription>
+        <CardHeader className="flex-row items-start justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <CardTitle>Kamar {room.number} — {room.property.name}</CardTitle>
+            <CardDescription>
+              {roomLabel}
+              {room.roomType ? ` · Tipe ${room.roomType.name}` : ''}
+            </CardDescription>
+          </div>
+          <DuplicateRoomDialog
+            roomId={id}
+            roomNumber={room.number}
+            floorId={room.floorId}
+            floors={floors}
+          />
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {quickActions.map((action) => (
@@ -109,13 +133,16 @@ export default async function EditRoomPage({ params }: Props) {
             propertyId={room.propertyId}
             floors={floors}
             facilities={facilities}
+            roomTypes={roomTypes}
             submitLabel="Simpan Perubahan"
             initial={{
               number: room.number,
               floorId: room.floorId,
+              roomTypeId: room.roomTypeId,
               price: room.price.toNumber(),
               sizeSqm: room.sizeSqm ? room.sizeSqm.toNumber() : null,
               description: room.description,
+              electricityMode: room.electricityMode,
               isActive: room.isActive,
               facilityIds: room.facilities.map((f) => f.facilityId),
               prices: room.prices.map((p) => ({
@@ -133,7 +160,23 @@ export default async function EditRoomPage({ params }: Props) {
           <CardTitle>Foto &amp; Video</CardTitle>
         </CardHeader>
         <CardContent>
-          <RoomPhotos roomId={id} attachments={attachments} />
+          <MediaGallery
+            entityId={id}
+            attachments={inheritsMedia ? typeAttachments : ownAttachments}
+            readOnly={inheritsMedia}
+            onUpload={uploadRoomPhotoAction}
+            onRemove={removeRoomPhotoAction}
+            notice={
+              inheritsMedia
+                ? `Menampilkan foto tipe ${room.roomType?.name}. Begitu kamar ini punya fotonya sendiri, foto tipe tidak lagi dipakai untuk unit ini.`
+                : undefined
+            }
+            emptyLabel={
+              room.roomType
+                ? `Belum ada foto — tipe ${room.roomType.name} juga belum punya.`
+                : 'Belum ada foto/video.'
+            }
+          />
         </CardContent>
       </Card>
 

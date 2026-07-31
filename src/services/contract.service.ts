@@ -102,6 +102,7 @@ async function insertContract(tx: Tx, data: InsertContractData) {
       periodEnd: period.end,
       periodMonth: period.start.getMonth() + 1,
       periodYear: period.start.getFullYear(),
+      rentAmount: data.rentPrice,
       amountDue: data.rentPrice,
       dueDate: period.start,
     },

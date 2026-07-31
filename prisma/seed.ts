@@ -237,6 +237,15 @@ async function main() {
   }
 
   console.log(`Seeded Facilities: ${facilitiesToSeed.length}`);
+
+  // N. Seed default Payment Method — bank/e-wallet ditambahkan pemilik sendiri lewat UI
+  await prisma.paymentMethod.upsert({
+    where: { name: 'Tunai' },
+    update: {},
+    create: { name: 'Tunai', type: 'CASH' },
+  });
+
+  console.log('Seeded PaymentMethod: Tunai');
 }
 
 main()

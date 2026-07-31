@@ -104,6 +104,27 @@ export function periodsInRange(
   return periods;
 }
 
+/**
+ * The optional price tiers a room (or room type) can carry, keyed by the form
+ * field that holds them. One list, used by the form, both services, and the
+ * public floor plan — a second copy is a second answer to "is 3-bulanan
+ * MONTHLY×3 or QUARTERLY×1".
+ */
+export const PRICE_TIER_FIELDS = [
+  { field: 'priceDaily', label: 'Harian', billingCycle: 'DAILY', interval: 1 },
+  { field: 'priceWeekly', label: 'Mingguan', billingCycle: 'WEEKLY', interval: 1 },
+  { field: 'priceQuarterly', label: '3 Bulanan', billingCycle: 'MONTHLY', interval: 3 },
+  { field: 'priceSemiAnnual', label: '6 Bulanan', billingCycle: 'MONTHLY', interval: 6 },
+  { field: 'priceYearly', label: 'Tahunan', billingCycle: 'YEARLY', interval: 1 },
+] as const satisfies readonly {
+  field: string;
+  label: string;
+  billingCycle: BillingCycleName;
+  interval: number;
+}[];
+
+export type PriceTierField = (typeof PRICE_TIER_FIELDS)[number]['field'];
+
 /** Calendar month `[first, firstOfNextMonth)` — the range an invoice run covers. */
 export function monthRange(periodMonth: number, periodYear: number): BillingPeriod {
   return {

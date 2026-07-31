@@ -4,16 +4,19 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   DoorOpen,
+  LayoutGrid,
   Sparkles,
   Tag,
   Users,
   FileText,
   Wallet,
+  Receipt,
   Wrench,
   ShieldAlert,
   BarChart3,
   ScrollText,
   UserCog,
+  Settings,
   LogOut,
   ChevronDown,
   PanelLeftClose,
@@ -21,6 +24,8 @@ import {
   Menu,
   X,
   Building,
+  Landmark,
+  CreditCard,
 } from 'lucide-react';
 
 import { Link, usePathname } from '@/i18n/navigation';
@@ -66,6 +71,12 @@ const SECTIONS: NavSection[] = [
         roles: ['SUPER_ADMIN', 'OPERASIONAL'],
       },
       {
+        href: '/admin/master-data/room-types',
+        label: 'Tipe Kamar',
+        icon: LayoutGrid,
+        roles: ['SUPER_ADMIN', 'OPERASIONAL'],
+      },
+      {
         href: '/admin/master-data/facilities',
         label: 'Fasilitas',
         icon: Sparkles,
@@ -102,6 +113,12 @@ const SECTIONS: NavSection[] = [
         roles: ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'],
       },
       {
+        href: '/admin/expenses',
+        label: 'Pengeluaran',
+        icon: Receipt,
+        roles: ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'],
+      },
+      {
         href: '/admin/maintenance',
         label: 'Maintenance',
         icon: Wrench,
@@ -123,6 +140,12 @@ const SECTIONS: NavSection[] = [
         href: '/admin/reports/financial',
         label: 'Laporan Keuangan',
         icon: BarChart3,
+        roles: ['SUPER_ADMIN', 'KEUANGAN'],
+      },
+      {
+        href: '/admin/reports/cash',
+        label: 'Rekap Kas',
+        icon: Landmark,
         roles: ['SUPER_ADMIN', 'KEUANGAN'],
       },
       {
@@ -160,6 +183,18 @@ const SECTIONS: NavSection[] = [
         label: 'Pengguna',
         icon: UserCog,
         roles: ['SUPER_ADMIN'],
+      },
+      {
+        href: '/admin/settings',
+        label: 'Pengaturan',
+        icon: Settings,
+        roles: ['SUPER_ADMIN', 'KEUANGAN'],
+      },
+      {
+        href: '/admin/settings/payment-methods',
+        label: 'Metode Pembayaran',
+        icon: CreditCard,
+        roles: ['SUPER_ADMIN', 'KEUANGAN'],
       },
     ],
   },

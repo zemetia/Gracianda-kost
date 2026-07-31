@@ -17,6 +17,7 @@ export interface PublicRoom {
   price: number;
   sizeSqm: number | null;
   description: string | null;
+  roomTypeName: string | null;
   status: 'AVAILABLE' | 'OCCUPIED';
   facilities: { id: string; name: string; icon: string | null }[];
   prices: { id: string; billingCycle: string; interval: number; price: number }[];
@@ -212,6 +213,9 @@ export function RoomFloorPlan({ floors }: { floors: PublicFloor[] }) {
                   <Badge variant={selectedRoom.status === 'AVAILABLE' ? 'success' : 'secondary'}>
                     {selectedRoom.status === 'AVAILABLE' ? 'Tersedia' : 'Terisi'}
                   </Badge>
+                  {selectedRoom.roomTypeName && (
+                    <Badge variant="outline">{selectedRoom.roomTypeName}</Badge>
+                  )}
                   {selectedRoom.sizeSqm && (
                     <Typography variant="small" className="text-foreground-muted">
                       Dimensi: ± {selectedRoom.sizeSqm} m²
