@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { getSession } from '@/lib/auth';
+import { formatDate } from '@/lib/utils';
 import { incidentService } from '@/services/incident.service';
 
 import { IncidentStatusForm } from './IncidentStatusForm';
@@ -48,31 +48,29 @@ export default async function IncidentDetailPage({ params }: Props) {
             {CATEGORY_LABEL[incident.category]}
           </Typography>
           <Typography variant="muted">
-            {incident.date.toLocaleDateString('id-ID')} ·{' '}
+            {formatDate(incident.date, 'id-ID')} ·{' '}
             {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
           </Typography>
         </div>
         <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Deskripsi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Typography variant="p">{incident.description}</Typography>
-        </CardContent>
-      </Card>
+      <section>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+          Deskripsi
+        </h3>
+        <Typography variant="p" className="mt-3 whitespace-pre-line">
+          {incident.description}
+        </Typography>
+      </section>
 
       {canManage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ubah Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <IncidentStatusForm incidentId={incident.id} currentStatus={incident.status} />
-          </CardContent>
-        </Card>
+        <section className="border-t border-border pt-6">
+          <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+            Ubah Status
+          </h3>
+          <IncidentStatusForm incidentId={incident.id} currentStatus={incident.status} />
+        </section>
       )}
     </div>
   );

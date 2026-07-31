@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { CurrencyInput } from '@/components/ui/CurrencyInput';
+import { FormError, FormGrid } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
 
 import { addPartialPaymentAction, type AddPaymentFormState } from '../actions';
@@ -16,22 +18,23 @@ export function AddPaymentForm({ paymentId }: { paymentId: string }) {
   );
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-3">
-      <Input
-        label="Nominal"
-        name="amount"
-        type="number"
-        min={1}
-        step="0.01"
-        required
-        error={state.fieldErrors?.amount?.[0]}
-      />
-      <Input label="Metode" name="method" placeholder="Transfer BCA" error={state.fieldErrors?.method?.[0]} />
-      <Input label="Catatan" name="note" error={state.fieldErrors?.note?.[0]} />
-      <Button type="submit" isLoading={isPending}>
+    <form action={formAction} className="flex flex-col gap-4">
+      <FormGrid columns={3}>
+        <CurrencyInput
+          label="Nominal"
+          name="amount"
+          required
+          error={state.fieldErrors?.amount?.[0]}
+        />
+        <Input label="Metode" name="method" placeholder="Transfer BCA" error={state.fieldErrors?.method?.[0]} />
+        <Input label="Catatan" name="note" error={state.fieldErrors?.note?.[0]} />
+      </FormGrid>
+
+      <FormError message={state.error} />
+
+      <Button type="submit" isLoading={isPending} className="self-start">
         Tambah Pembayaran
       </Button>
-      {state.error && <p className="w-full text-sm text-destructive">{state.error}</p>}
     </form>
   );
 }

@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { ROLE_LABEL } from '@/config/roles';
 import { Link } from '@/i18n/navigation';
@@ -24,7 +23,7 @@ export default async function UserDetailPage({ params }: Props) {
   const isSelf = user.id === session?.user.id;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex max-w-4xl flex-col gap-10">
       <div>
         <Link href="/admin/users" className="text-sm text-foreground-muted hover:underline">
           ← Kembali ke daftar pengguna
@@ -38,38 +37,29 @@ export default async function UserDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ubah Data</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <UserForm
-            action={updateUserAction.bind(null, user.id)}
-            initial={{ name: user.name, email: user.email, role: user.role }}
-            submitLabel="Simpan Perubahan"
-            passwordRequired={false}
-          />
-        </CardContent>
-      </Card>
+      <UserForm
+        action={updateUserAction.bind(null, user.id)}
+        initial={{ name: user.name, email: user.email, role: user.role }}
+        submitLabel="Simpan Perubahan"
+        passwordRequired={false}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Status Akun</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <Typography variant="muted">
-            Akun nonaktif tidak bisa login, tapi riwayat audit-nya tetap tersimpan.
+      <section className="flex flex-col gap-3 border-t border-border pt-8">
+        <h3 className="text-sm font-semibold text-foreground">Status Akun</h3>
+        <Typography variant="muted" className="max-w-xl text-xs leading-relaxed">
+          Akun nonaktif tidak bisa login, tapi riwayat audit-nya tetap tersimpan.
+        </Typography>
+        {isSelf ? (
+          <Typography variant="muted" className="text-xs">
+            Kamu tidak bisa menonaktifkan akunmu sendiri.
           </Typography>
-          {isSelf ? (
-            <Typography variant="muted">Kamu tidak bisa menonaktifkan akunmu sendiri.</Typography>
-          ) : (
-            <UserActiveToggle
-              action={setUserActiveAction.bind(null, user.id)}
-              isActive={user.isActive}
-            />
-          )}
-        </CardContent>
-      </Card>
+        ) : (
+          <UserActiveToggle
+            action={setUserActiveAction.bind(null, user.id)}
+            isActive={user.isActive}
+          />
+        )}
+      </section>
     </div>
   );
 }

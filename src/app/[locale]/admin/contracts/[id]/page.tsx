@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { MetricInline } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { formatDate, formatRupiah } from '@/lib/utils';
 import { contractService } from '@/services/contract.service';
 import { paymentService } from '@/services/payment.service';
 
@@ -67,7 +69,7 @@ export default async function ContractDetailPage({ params, searchParams }: Props
   const outstanding = await paymentService.getOutstandingByContract(id);
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
+    <div className="flex max-w-3xl flex-col gap-8">
       <div className="flex items-start justify-between">
         <div>
           <Typography variant="h2" className="mb-1">
@@ -99,47 +101,33 @@ export default async function ContractDetailPage({ params, searchParams }: Props
         />
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Detail Kontrak</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <Typography variant="muted">Harga Sewa</Typography>
-            <Typography variant="p">
-              Rp {contract.rentPrice.toNumber().toLocaleString('id-ID')} / {formatBillingCycle(contract.billingCycle, contract.billingInterval)}
-            </Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Deposit</Typography>
-            <Typography variant="p">
-              {contract.deposit ? `Rp ${contract.deposit.toNumber().toLocaleString('id-ID')}` : '—'}
-            </Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Tanggal Masuk</Typography>
-            <Typography variant="p">{contract.startDate.toLocaleDateString('id-ID')}</Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Tanggal Keluar (Target)</Typography>
-            <Typography variant="p">
-              {contract.endDate ? contract.endDate.toLocaleDateString('id-ID') : '—'}
-            </Typography>
-          </div>
+      <section>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+          Detail Kontrak
+        </h3>
+        <div className="mt-3">
+          <MetricInline
+            label="Harga sewa"
+            value={`${formatRupiah(contract.rentPrice.toNumber())} / ${formatBillingCycle(contract.billingCycle, contract.billingInterval)}`}
+          />
+          <MetricInline
+            label="Deposit"
+            value={contract.deposit ? formatRupiah(contract.deposit.toNumber()) : '—'}
+          />
+          <MetricInline label="Tanggal masuk" value={formatDate(contract.startDate, 'id-ID')} />
+          <MetricInline
+            label="Tanggal keluar (target)"
+            value={contract.endDate ? formatDate(contract.endDate, 'id-ID') : '—'}
+          />
           {contract.actualEndDate && (
-            <div>
-              <Typography variant="muted">Tanggal Keluar Aktual</Typography>
-              <Typography variant="p">{contract.actualEndDate.toLocaleDateString('id-ID')}</Typography>
-            </div>
+            <MetricInline
+              label="Tanggal keluar aktual"
+              value={formatDate(contract.actualEndDate, 'id-ID')}
+            />
           )}
-          {contract.notes && (
-            <div className="col-span-2">
-              <Typography variant="muted">Catatan</Typography>
-              <Typography variant="p">{contract.notes}</Typography>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          {contract.notes && <MetricInline label="Catatan" value={contract.notes} />}
+        </div>
+      </section>
 
       {contract.occupants.length > 0 && (
         <Card>
@@ -189,7 +177,7 @@ export default async function ContractDetailPage({ params, searchParams }: Props
             <CardTitle>Tindakan</CardTitle>
             <CardDescription>
               {outstanding > 0
-                ? `Sisa tunggakan Rp ${outstanding.toLocaleString('id-ID')} — selesaikan sebelum penyewa keluar.`
+                ? `Sisa tunggakan ${formatRupiah(outstanding)} — selesaikan sebelum penyewa keluar.`
                 : 'Semua tagihan kontrak ini sudah lunas.'}
             </CardDescription>
           </CardHeader>
@@ -212,31 +200,22 @@ export default async function ContractDetailPage({ params, searchParams }: Props
       )}
 
       {contract.status !== 'ACTIVE' && contract.depositRefunded !== null && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Penyelesaian Deposit</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <Typography variant="muted">Potongan</Typography>
-              <Typography variant="p">
-                Rp {(contract.depositDeduction?.toNumber() ?? 0).toLocaleString('id-ID')}
-              </Typography>
-            </div>
-            <div>
-              <Typography variant="muted">Dikembalikan</Typography>
-              <Typography variant="p">
-                Rp {contract.depositRefunded.toNumber().toLocaleString('id-ID')}
-              </Typography>
-            </div>
-            {contract.depositNote && (
-              <div className="col-span-2">
-                <Typography variant="muted">Catatan</Typography>
-                <Typography variant="p">{contract.depositNote}</Typography>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <section>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+            Penyelesaian Deposit
+          </h3>
+          <div className="mt-3">
+            <MetricInline
+              label="Potongan"
+              value={formatRupiah(contract.depositDeduction?.toNumber() ?? 0)}
+            />
+            <MetricInline
+              label="Dikembalikan"
+              value={formatRupiah(contract.depositRefunded.toNumber())}
+            />
+            {contract.depositNote && <MetricInline label="Catatan" value={contract.depositNote} />}
+          </div>
+        </section>
       )}
     </div>
   );

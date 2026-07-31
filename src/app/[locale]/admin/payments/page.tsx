@@ -1,8 +1,12 @@
+import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
+import { formatDate, formatNumber, formatRupiah } from '@/lib/utils';
 import {
   getPaymentBucket,
   getPaymentStatus,
@@ -42,10 +46,6 @@ const BUCKETS: { value: BucketFilter; label: string }[] = [
 
 function isBucket(value: string | undefined): value is BucketFilter {
   return BUCKETS.some((bucket) => bucket.value === value);
-}
-
-function rupiah(value: number): string {
-  return `Rp ${value.toLocaleString('id-ID')}`;
 }
 
 export default async function PaymentsPage({ searchParams }: Props) {
@@ -108,132 +108,122 @@ export default async function PaymentsPage({ searchParams }: Props) {
         {canManage && <GenerateInvoicesForm />}
       </div>
 
-      {/* Bucket tabs: how many, and how much money is still out there */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {/* Bucket tabs: how many, and how much money is still out there.
+          Hairline-separated columns — the active one is marked by type, not a box. */}
+      <div className="grid grid-cols-2 gap-6 border-y border-border py-6 sm:grid-cols-3 lg:grid-cols-5 lg:gap-0 lg:divide-x lg:divide-border lg:[&>*:not(:first-child)]:pl-6">
         {summary.map((tab) => (
           <Link
             key={tab.value}
             href={queryFor(tab.value)}
-            className={`flex flex-col gap-1 rounded-xl border p-3 transition-colors ${
-              activeBucket === tab.value
-                ? 'border-primary bg-primary-subtle'
-                : 'border-border bg-surface hover:border-border-strong'
-            }`}
+            aria-current={activeBucket === tab.value ? 'page' : undefined}
+            className="group block rounded-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+            <span
+              className={`block text-xs font-medium uppercase tracking-wide ${
+                activeBucket === tab.value ? 'text-primary' : 'text-foreground-muted group-hover:text-foreground'
+              }`}
+            >
               {tab.label}
             </span>
-            <span className="text-lg font-bold text-foreground">{tab.count}</span>
-            {tab.value !== 'PAID' && tab.amount > 0 && (
-              <span className="text-xs text-foreground-muted">{rupiah(tab.amount)}</span>
-            )}
+            <span
+              className={`mt-2 block text-2xl font-medium tracking-tight tabular-nums underline decoration-transparent underline-offset-4 transition group-hover:decoration-border-strong ${
+                activeBucket === tab.value ? 'text-foreground' : 'text-foreground-muted'
+              }`}
+            >
+              {formatNumber(tab.count)}
+            </span>
+            <span className="mt-1 block text-xs text-foreground-muted">
+              {tab.value !== 'PAID' && tab.amount > 0 ? formatRupiah(tab.amount) : ' '}
+            </span>
           </Link>
         ))}
       </div>
 
-      <Card>
-        <CardContent>
-          <form method="get" className="flex flex-wrap items-end gap-3">
+      <Card noPadding>
+        <CardContent className="p-4">
+          <form method="get" className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             {activeBucket !== 'ALL' && <input type="hidden" name="bucket" value={activeBucket} />}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-q" className="text-sm font-medium text-foreground">
-                Cari
-              </label>
-              <input
+            <div className="grid flex-1 grid-cols-2 gap-4 lg:max-w-2xl lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <Input
                 id="filter-q"
                 name="q"
+                label="Cari"
+                size="sm"
                 defaultValue={q ?? ''}
                 placeholder="Nama penyewa, no. kamar, kode kontrak"
-                className="h-9 w-64 rounded-md border border-input bg-surface px-3 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-month" className="text-sm font-medium text-foreground">
-                Bulan
-              </label>
-              <select
-                id="filter-month"
+              <Select
                 name="month"
+                label="Bulan"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={month ?? ''}
-                className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Semua</option>
-                {MONTH_NAMES_ID.map((name, i) => (
-                  <option key={name} value={i + 1}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-year" className="text-sm font-medium text-foreground">
-                Tahun
-              </label>
-              <input
+                options={MONTH_NAMES_ID.map((name, i) => ({ value: String(i + 1), label: name }))}
+              />
+              <Input
                 id="filter-year"
                 name="year"
+                label="Tahun"
                 type="number"
+                size="sm"
                 defaultValue={year ?? ''}
                 placeholder={String(new Date().getFullYear())}
-                className="h-9 w-28 rounded-md border border-input bg-surface px-3 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
-            <button
-              type="submit"
-              className="h-9 rounded-md border border-border bg-surface-raised px-4 text-sm font-medium text-foreground hover:border-border-strong"
-            >
+            <Button type="submit" size="sm" variant="secondary" className="shrink-0">
               Terapkan
-            </button>
+            </Button>
           </form>
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Penyewa</th>
-              <th className="px-4 py-3 font-medium">Kamar</th>
-              <th className="px-4 py-3 font-medium">Periode</th>
-              <th className="px-4 py-3 font-medium">Sisa Tagihan</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Ditagih</th>
-              <th className="px-4 py-3 font-medium" />
+          <thead>
+            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
+              <th>Penyewa</th>
+              <th>Kamar</th>
+              <th>Periode</th>
+              <th className="text-right">Sisa Tagihan</th>
+              <th>Status</th>
+              <th>Ditagih</th>
+              <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {visibleRows.map(({ payment, status, outstanding }) => {
               const lastReminder = payment.reminders[0];
               return (
-                <tr key={payment.id}>
-                  <td className="px-4 py-3">
+                <tr key={payment.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
+                  <td>
                     <Link href={`/admin/payments/${payment.id}`} className="font-medium text-foreground hover:underline">
                       {payment.contract.tenant.fullName}
                     </Link>
-                    <span className="block text-xs text-foreground-subtle">
+                    <span className="block text-xs text-foreground-muted">
                       {payment.contract.contractCode}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-foreground-muted">
+                  <td className="text-foreground-muted">
                     {payment.contract.room.property.name} — No. {payment.contract.room.number}
                     {payment.contract.room.floor ? ` (${payment.contract.room.floor.name})` : ''}
                   </td>
-                  <td className="px-4 py-3 text-foreground-muted">
+                  <td className="text-foreground-muted">
                     {MONTH_NAMES_ID[payment.periodMonth - 1]} {payment.periodYear}
-                    <span className="block text-xs text-foreground-subtle">
-                      Jatuh tempo {payment.dueDate.toLocaleDateString('id-ID')}
+                    <span className="block text-xs tabular-nums text-foreground-muted">
+                      Jatuh tempo {formatDate(payment.dueDate, 'id-ID')}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {outstanding > 0 ? rupiah(outstanding) : '—'}
+                  <td className="text-right font-medium tabular-nums text-foreground">
+                    {outstanding > 0 ? formatRupiah(outstanding) : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <PaymentStatusBadge status={status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-foreground-muted">
-                    {lastReminder ? lastReminder.sentAt.toLocaleDateString('id-ID') : '—'}
+                  <td className="text-xs tabular-nums text-foreground-muted">
+                    {lastReminder ? formatDate(lastReminder.sentAt, 'id-ID') : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="pr-0">
                     <div className="flex justify-end gap-2">
                       {status !== 'PAID' && (
                         <SendWaButton
@@ -261,7 +251,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
             })}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={7} className="py-8 text-center text-foreground-muted">
                   Tidak ada tagihan pada filter ini.
                 </td>
               </tr>

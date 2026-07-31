@@ -65,10 +65,16 @@ model Room {
 // service layer from whether the room has an active Contract (see
 // contractService / roomService.list / publicRoomService).
 
+enum FacilityCategory {
+  COMMON
+  ROOM
+}
+
 model Facility {
-  id   String  @id @default(cuid())
-  name String  @unique
-  icon String?
+  id       String           @id @default(cuid())
+  name     String           @unique
+  icon     String?
+  category FacilityCategory @default(ROOM)
 
   rooms RoomFacility[]
 

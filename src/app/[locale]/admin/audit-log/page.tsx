@@ -1,8 +1,12 @@
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Select } from '@/components/ui/Select';
 import { Typography } from '@/components/ui/Typography';
 import { ROLE_LABEL } from '@/config/roles';
 import { Link } from '@/i18n/navigation';
+import { formatDate, formatNumber } from '@/lib/utils';
 import { auditLogFilterSchema } from '@/lib/validations';
 import { auditService } from '@/services/audit.service';
 import { userService } from '@/services/user.service';
@@ -31,9 +35,6 @@ const ACTION_VARIANT: Record<string, 'success' | 'warning' | 'destructive'> = {
   UPDATE: 'warning',
   DELETE: 'destructive',
 };
-
-const SELECT_CLASS =
-  'h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export default async function AuditLogPage({ searchParams }: Props) {
   const query = await searchParams;
@@ -78,138 +79,100 @@ export default async function AuditLogPage({ searchParams }: Props) {
         </Typography>
       </div>
 
-      <Card>
-        <CardContent>
-          <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-entity" className="text-sm font-medium text-foreground">
-                Entitas
-              </label>
-              <select
-                id="filter-entity"
+      <Card noPadding>
+        <CardContent className="p-4">
+          <form method="get" className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid flex-1 grid-cols-2 gap-4 lg:max-w-4xl lg:grid-cols-5">
+              <Select
                 name="entityType"
+                label="Entitas"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={query.entityType ?? ''}
-                className={SELECT_CLASS}
-              >
-                <option value="">Semua</option>
-                {entityTypes.map((entityType) => (
-                  <option key={entityType} value={entityType}>
-                    {entityType}
-                  </option>
-                ))}
-              </select>
-            </div>
+                options={entityTypes.map((entityType) => ({ value: entityType, label: entityType }))}
+              />
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-user" className="text-sm font-medium text-foreground">
-                Pengguna
-              </label>
-              <select
-                id="filter-user"
+              <Select
                 name="userId"
+                label="Pengguna"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={query.userId ?? ''}
-                className={SELECT_CLASS}
-              >
-                <option value="">Semua</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name ?? user.email}
-                  </option>
-                ))}
-              </select>
-            </div>
+                options={users.map((user) => ({ value: user.id, label: user.name ?? user.email ?? '—' }))}
+              />
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-action" className="text-sm font-medium text-foreground">
-                Aksi
-              </label>
-              <select
-                id="filter-action"
+              <Select
                 name="action"
+                label="Aksi"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={query.action ?? ''}
-                className={SELECT_CLASS}
-              >
-                <option value="">Semua</option>
-                <option value="CREATE">Buat</option>
-                <option value="UPDATE">Ubah</option>
-                <option value="DELETE">Hapus</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-from" className="text-sm font-medium text-foreground">
-                Dari
-              </label>
-              <input
-                id="filter-from"
-                name="from"
-                type="date"
-                defaultValue={query.from ?? ''}
-                className={SELECT_CLASS}
+                options={[
+                  { value: 'CREATE', label: 'Buat' },
+                  { value: 'UPDATE', label: 'Ubah' },
+                  { value: 'DELETE', label: 'Hapus' },
+                ]}
               />
+
+              <DatePicker name="from" label="Dari" size="sm" defaultValue={query.from ?? ''} />
+
+              <DatePicker name="to" label="Sampai" size="sm" defaultValue={query.to ?? ''} />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="filter-to" className="text-sm font-medium text-foreground">
-                Sampai
-              </label>
-              <input
-                id="filter-to"
-                name="to"
-                type="date"
-                defaultValue={query.to ?? ''}
-                className={SELECT_CLASS}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="h-9 rounded-md border border-border bg-surface-raised px-4 text-sm font-medium text-foreground hover:border-border-strong"
-            >
+            <Button type="submit" size="sm" variant="secondary" className="shrink-0">
               Filter
-            </button>
+            </Button>
           </form>
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Waktu</th>
-              <th className="px-4 py-3 font-medium">Pengguna</th>
-              <th className="px-4 py-3 font-medium">Aksi</th>
-              <th className="px-4 py-3 font-medium">Entitas</th>
-              <th className="px-4 py-3 font-medium">Perubahan</th>
+          <thead>
+            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
+              <th>Waktu</th>
+              <th>Pengguna</th>
+              <th>Aksi</th>
+              <th>Entitas</th>
+              <th>Perubahan</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {result.rows.map((row) => (
-              <tr key={row.id} className="align-top">
-                <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">
-                  {row.createdAt.toLocaleString('id-ID')}
+              <tr key={row.id} className="border-b border-border align-top [&>td]:py-2.5 [&>td]:pr-4">
+                <td className="whitespace-nowrap tabular-nums text-foreground-muted">
+                  {formatDate(row.createdAt, 'id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <div className="font-medium text-foreground">{row.user.name ?? row.user.email}</div>
-                  <div className="text-xs text-foreground-subtle">
+                  <div className="text-xs text-foreground-muted">
                     {ROLE_LABEL[row.user.role] ?? row.user.role}
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <Badge variant={ACTION_VARIANT[row.action]}>{ACTION_LABEL[row.action]}</Badge>
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <div className="font-medium text-foreground">{row.entityType}</div>
-                  <div className="font-mono text-xs text-foreground-subtle">{row.entityId}</div>
+                  <div className="font-mono text-xs text-foreground-muted">{row.entityId}</div>
                 </td>
-                <td className="max-w-lg px-4 py-3">
+                <td className="max-w-lg pr-0">
                   <AuditDiff before={row.before} after={row.after} />
                 </td>
               </tr>
             ))}
             {result.rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={5} className="py-8 text-center text-foreground-muted">
                   Tidak ada catatan audit untuk filter ini.
                 </td>
               </tr>
@@ -220,7 +183,9 @@ export default async function AuditLogPage({ searchParams }: Props) {
 
       <div className="flex items-center justify-between text-sm text-foreground-muted">
         <span>
-          {result.total} catatan · halaman {result.page} dari {result.pageCount}
+          <span className="tabular-nums">{formatNumber(result.total)}</span> catatan · halaman{' '}
+          <span className="tabular-nums">{result.page}</span> dari{' '}
+          <span className="tabular-nums">{result.pageCount}</span>
         </span>
         <div className="flex gap-2">
           {result.page > 1 && (

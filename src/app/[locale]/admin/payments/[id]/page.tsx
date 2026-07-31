@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { MetricBlock, MetricInline, MetricRow } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
+import { formatDate, formatNumber } from '@/lib/utils';
 import { attachmentService } from '@/services/attachment.service';
 import { getPaymentStatus, paymentService } from '@/services/payment.service';
 
@@ -53,43 +55,27 @@ export default async function PaymentDetailPage({ params }: Props) {
         <PaymentStatusBadge status={status} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Detail Tagihan</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <Typography variant="muted">Tagihan</Typography>
-            <Typography variant="p">Rp {amountDue.toLocaleString('id-ID')}</Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Sudah Dibayar</Typography>
-            <Typography variant="p">Rp {amountPaid.toLocaleString('id-ID')}</Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Jatuh Tempo</Typography>
-            <Typography variant="p">{payment.dueDate.toLocaleDateString('id-ID')}</Typography>
-          </div>
-          <div>
-            <Typography variant="muted">Lunas Pada</Typography>
-            <Typography variant="p">
-              {payment.paidAt ? payment.paidAt.toLocaleDateString('id-ID') : '—'}
-            </Typography>
-          </div>
-          {payment.method && (
-            <div>
-              <Typography variant="muted">Metode</Typography>
-              <Typography variant="p">{payment.method}</Typography>
-            </div>
-          )}
-          {payment.note && (
-            <div className="col-span-2">
-              <Typography variant="muted">Catatan</Typography>
-              <Typography variant="p">{payment.note}</Typography>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <MetricRow columns={3}>
+        <MetricBlock label="Tagihan" value={formatNumber(amountDue)} prefix="Rp" size="secondary" />
+        <MetricBlock label="Sudah Dibayar" value={formatNumber(amountPaid)} prefix="Rp" size="secondary" />
+        <MetricBlock
+          label="Sisa"
+          value={formatNumber(Math.max(amountDue - amountPaid, 0))}
+          prefix="Rp"
+          size="secondary"
+          tone={amountPaid < amountDue ? 'destructive' : 'muted'}
+        />
+      </MetricRow>
+
+      <div className="max-w-xl">
+        <MetricInline label="Jatuh tempo" value={formatDate(payment.dueDate, 'id-ID')} />
+        <MetricInline
+          label="Lunas pada"
+          value={payment.paidAt ? formatDate(payment.paidAt, 'id-ID') : '—'}
+        />
+        {payment.method && <MetricInline label="Metode" value={payment.method} />}
+        {payment.note && <MetricInline label="Catatan" value={payment.note} />}
+      </div>
 
       {(status === 'DUE' || status === 'OVERDUE') && (
         <Card>

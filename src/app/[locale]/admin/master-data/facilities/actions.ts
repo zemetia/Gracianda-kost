@@ -22,6 +22,7 @@ export async function createFacilityAction(
   const parsed = facilitySchema.safeParse({
     name: formData.get('name'),
     icon: formData.get('icon') || undefined,
+    category: formData.get('category') ?? undefined,
   });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 

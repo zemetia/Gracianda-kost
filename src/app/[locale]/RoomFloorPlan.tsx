@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Typography } from '@/components/ui/Typography';
 import { useToast } from '@/hooks';
+import { formatRupiah, formatRupiahShort } from '@/lib/utils';
 import { buildWaLink } from '@/lib/whatsapp';
 import { siteConfig } from '@/config/site';
 
@@ -27,18 +28,6 @@ export interface PublicFloor {
   id: string;
   name: string;
   rooms: PublicRoom[];
-}
-
-function formatRupiah(value: number): string {
-  return `Rp ${value.toLocaleString('id-ID')}`;
-}
-
-function formatRupiahShort(value: number): string {
-  if (value >= 1000000) {
-    const million = value / 1000000;
-    return `Rp ${million.toFixed(1).replace('.0', '')} jt`;
-  }
-  return `Rp ${(value / 1000).toFixed(0)}k`;
 }
 
 // Facility icons mapping

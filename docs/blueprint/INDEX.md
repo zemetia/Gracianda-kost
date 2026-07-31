@@ -12,6 +12,7 @@ Cross-linked reference for AI agents. Every path is a backlink. Read this file f
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Request lifecycle, provider tree, proxy, integration wiring | Debugging system-level issues, adding integrations |
 | [COMPONENTS.md](./COMPONENTS.md) | CVA pattern, four-file rule, shadcn, Storybook, tests | Building or modifying UI |
 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | `@theme {}` tokens, oklch palette, typography, radius | Applying styles, adding tokens |
+| [DATA_PRESENTATION.md](./DATA_PRESENTATION.md) | How every number is rendered — metrics, deltas, tables, charts, Rupiah formatting | Any UI showing a metric, KPI, total, tunggakan, okupansi, ratio, or chart |
 | [BEST_PRACTICE.md](./BEST_PRACTICE.md) | TypeScript constraints, ESLint rules, naming, anti-patterns | All code changes |
 | [I18N.md](./I18N.md) | next-intl routing, translations, navigation, static gen | Any page or text work |
 | [SERVICES.md](./SERVICES.md) | ApiClient, interceptors, domain services, Zod schemas | API calls, validation, error handling |
@@ -125,6 +126,8 @@ import { loginSchema, registerSchema, changePasswordSchema } from '@/lib/validat
 | 16 | Prisma 7: no `url` in `datasource` block — connection string is in `prisma.config.ts` + adapter | `P1012` schema validation error |
 | 14 | All auth config lives in `src/auth.ts` only | Split config causes session/token mismatch |
 | 15 | `requireAuth()` / `requireRole()` at the top of every protected Server Action/Route Handler | Auth bypass |
+| 17 | A metric is never wrapped in a bordered/filled box | Boxed stat tiles — see [DATA_PRESENTATION.md](./DATA_PRESENTATION.md) |
+| 18 | `tabular-nums` on every numeral; money via the shared `formatRupiah`, `Decimal` converted with `.toNumber()` in the service | Ragged digit columns, page-local currency formatters, `Decimal` in JSX |
 
 ---
 

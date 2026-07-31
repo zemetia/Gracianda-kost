@@ -34,6 +34,7 @@ export const roomSchema = z.object({
 export const facilitySchema = z.object({
   name: z.string().min(1, 'Nama fasilitas wajib diisi').max(100),
   icon: z.string().max(50).optional(),
+  category: z.enum(['COMMON', 'ROOM']).default('ROOM'),
 });
 
 export const promoSchema = z

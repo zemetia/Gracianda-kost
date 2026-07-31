@@ -22,12 +22,13 @@ export default async function TenantsPage({ searchParams }: Props) {
         <Typography variant="muted">Data penyewa — dipakai ulang lintas kontrak.</Typography>
       </div>
 
-      <Card>
-        <CardContent>
+      <Card noPadding>
+        <CardContent className="p-4">
           <form method="get" className="max-w-sm">
             <Input
               label="Cari"
               name="q"
+              size="sm"
               defaultValue={q}
               placeholder="Nama, KTP, atau nomor HP"
             />
@@ -35,34 +36,32 @@ export default async function TenantsPage({ searchParams }: Props) {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Nama</th>
-              <th className="px-4 py-3 font-medium">KTP</th>
-              <th className="px-4 py-3 font-medium">HP</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+          <thead>
+            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
+              <th>Nama</th>
+              <th>KTP</th>
+              <th>HP</th>
+              <th>Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {tenants.map((tenant) => (
-              <tr key={tenant.id}>
-                <td className="px-4 py-3 font-medium text-foreground">
+              <tr key={tenant.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
+                <td className="font-medium text-foreground">
                   <Link href={`/admin/tenants/${tenant.id}`} className="hover:underline">
                     {tenant.fullName}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">{tenant.ktpNumber}</td>
-                <td className="px-4 py-3 text-foreground-muted">{tenant.phone}</td>
-                <td className="px-4 py-3">
-                  {tenant.isBlacklisted && <Badge variant="destructive">Blacklist</Badge>}
-                </td>
+                <td className="tabular-nums text-foreground-muted">{tenant.ktpNumber}</td>
+                <td className="tabular-nums text-foreground-muted">{tenant.phone}</td>
+                <td>{tenant.isBlacklisted && <Badge variant="destructive">Blacklist</Badge>}</td>
               </tr>
             ))}
             {tenants.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={4} className="py-8 text-center text-foreground-muted">
                   Tidak ada penyewa ditemukan.
                 </td>
               </tr>

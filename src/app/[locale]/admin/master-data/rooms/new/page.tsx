@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { facilityService } from '@/services/facility.service';
 import { roomService } from '@/services/room.service';
 import { propertyService } from '@/services/property.service';
@@ -26,21 +26,21 @@ export default async function NewRoomPage({ searchParams }: Props) {
   ]);
 
   return (
-    <div className="max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Tambah Kamar/Unit — {property.name}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RoomForm
-            action={createRoomAction}
-            propertyId={propertyId}
-            floors={floors}
-            facilities={facilities}
-            submitLabel="Simpan Kamar/Unit"
-          />
-        </CardContent>
-      </Card>
+    <div className="flex max-w-5xl flex-col gap-8">
+      <PageHeader
+        title="Tambah Kamar/Unit"
+        description={property.name}
+        backHref="/admin/master-data/rooms"
+        backLabel="Daftar Kamar"
+      />
+
+      <RoomForm
+        action={createRoomAction}
+        propertyId={propertyId}
+        floors={floors}
+        facilities={facilities}
+        submitLabel="Simpan Kamar/Unit"
+      />
     </div>
   );
 }

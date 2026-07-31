@@ -6,6 +6,11 @@ import { facilityService } from '@/services/facility.service';
 import { removeFacilityAction } from './actions';
 import { NewFacilityForm } from './NewFacilityForm';
 
+const GROUPS = [
+  { category: 'COMMON', label: 'Fasilitas Umum' },
+  { category: 'ROOM', label: 'Fasilitas Kamar' },
+] as const;
+
 export default async function FacilitiesPage() {
   const facilities = await facilityService.list();
 
@@ -24,20 +29,33 @@ export default async function FacilitiesPage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {facilities.map((facility) => (
-          <form key={facility.id} action={removeFacilityAction.bind(null, facility.id)}>
-            <button type="submit" title="Klik untuk hapus">
-              <Badge variant="outline" className="cursor-pointer hover:border-destructive hover:text-destructive">
-                {facility.name} ×
-              </Badge>
-            </button>
-          </form>
-        ))}
-        {facilities.length === 0 && (
-          <Typography variant="muted">Belum ada fasilitas.</Typography>
-        )}
-      </div>
+      {facilities.length === 0 ? (
+        <Typography variant="muted">Belum ada fasilitas.</Typography>
+      ) : (
+        GROUPS.map(({ category, label }) => {
+          const items = facilities.filter((facility) => facility.category === category);
+          if (items.length === 0) return null;
+
+          return (
+            <div key={category}>
+              <Typography variant="h4" className="mb-3">
+                {label}
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {items.map((facility) => (
+                  <form key={facility.id} action={removeFacilityAction.bind(null, facility.id)}>
+                    <button type="submit" title="Klik untuk hapus">
+                      <Badge variant="outline" className="cursor-pointer hover:border-destructive hover:text-destructive">
+                        {facility.name} ×
+                      </Badge>
+                    </button>
+                  </form>
+                ))}
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }

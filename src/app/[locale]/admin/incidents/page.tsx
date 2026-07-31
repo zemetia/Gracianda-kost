@@ -1,10 +1,12 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { Select } from '@/components/ui/Select';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
+import { formatDate } from '@/lib/utils';
 import { incidentService } from '@/services/incident.service';
 import { roomService } from '@/services/room.service';
 import type { IncidentCategory, IncidentStatus } from '@/generated/prisma/client';
@@ -70,100 +72,77 @@ export default async function IncidentsPage({ searchParams }: Props) {
         )}
       </div>
 
-      <Card>
-        <CardContent>
-          <form method="get" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="category" className="text-sm font-medium text-foreground">
-                Kategori
-              </label>
-              <select
-                id="category"
+      <Card noPadding>
+        <CardContent className="p-4">
+          <form method="get" className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="grid flex-1 grid-cols-2 gap-4 lg:max-w-2xl lg:grid-cols-3">
+              <Select
                 name="category"
+                label="Kategori"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={category ?? ''}
-                className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Semua</option>
-                {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="status" className="text-sm font-medium text-foreground">
-                Status
-              </label>
-              <select
-                id="status"
+                options={Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))}
+              />
+              <Select
                 name="status"
+                label="Status"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={status ?? ''}
-                className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Semua</option>
-                {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="floorId" className="text-sm font-medium text-foreground">
-                Lantai
-              </label>
-              <select
-                id="floorId"
+                options={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))}
+              />
+              <Select
                 name="floorId"
+                label="Lantai"
+                size="sm"
+                placeholder="Semua"
+                allowEmpty
                 defaultValue={floorId ?? ''}
-                className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Semua</option>
-                {floors.map((floor) => (
-                  <option key={floor.id} value={floor.id}>
-                    {floor.name}
-                  </option>
-                ))}
-              </select>
+                options={floors.map((floor) => ({ value: floor.id, label: floor.name }))}
+              />
             </div>
-            <Button type="submit" variant="secondary" className="self-end">
+            <Button type="submit" size="sm" variant="secondary" className="shrink-0">
               Terapkan Filter
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-raised text-left text-foreground-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Tanggal</th>
-              <th className="px-4 py-3 font-medium">Kategori</th>
-              <th className="px-4 py-3 font-medium">Lokasi</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+          <thead>
+            <tr className="border-b border-border text-left">
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Tanggal</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Kategori</th>
+              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Lokasi</th>
+              <th className="py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {incidents.map((incident) => (
-              <tr key={incident.id}>
-                <td className="px-4 py-3 text-foreground-muted">{incident.date.toLocaleDateString('id-ID')}</td>
-                <td className="px-4 py-3 font-medium text-foreground">
+              <tr key={incident.id} className="border-b border-border">
+                <td className="py-2.5 pr-4 tabular-nums text-foreground-muted">
+                  {formatDate(incident.date, 'id-ID')}
+                </td>
+                <td className="py-2.5 pr-4 font-medium text-foreground">
                   <Link href={`/admin/incidents/${incident.id}`} className="hover:underline">
                     {CATEGORY_LABEL[incident.category]}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-foreground-muted">
+                <td className="py-2.5 pr-4 text-foreground-muted">
                   {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
                 </td>
-                <td className="px-4 py-3">
+                <td className="py-2.5">
                   <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>
                 </td>
               </tr>
             ))}
             {incidents.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-foreground-subtle">
+                <td colSpan={4} className="py-8 text-center text-foreground-muted">
                   Belum ada insiden tercatat.
                 </td>
               </tr>

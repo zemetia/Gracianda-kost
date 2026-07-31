@@ -3,7 +3,11 @@
 import { useActionState, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { FormCard, FormError, FormGrid, FormLayout, FormStickyBar } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 
 import { createIncidentAction, type IncidentFormState } from './actions';
 
@@ -43,125 +47,95 @@ export function IncidentForm({
 }) {
   const [state, formAction, isPending] = useActionState(createIncidentAction, initialState);
   const [selectedPropertyId, setSelectedPropertyId] = useState(initialPropertyId ?? '');
+  // Controlled so switching property drops a room that no longer belongs to it.
+  const [selectedRoomId, setSelectedRoomId] = useState(initialRoomId ?? '');
 
-  const filteredRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
+  const roomOptions = rooms
+    .filter((room) => room.propertyId === selectedPropertyId)
+    .map((room) => ({
+      value: room.id,
+      label: `No. ${room.number}`,
+      ...(room.floor ? { hint: room.floor.name } : {}),
+    }));
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="category" className="text-sm font-medium text-foreground">
-            Kategori <span className="text-destructive">*</span>
-          </label>
-          <select
-            id="category"
-            name="category"
+    <form action={formAction}>
+      <FormLayout>
+        <FormCard title="Kejadian" description="Apa yang terjadi dan kapan.">
+          <FormGrid>
+            <Select
+              name="category"
+              label="Kategori"
+              required
+              placeholder="Pilih kategori"
+              options={Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))}
+              error={state.fieldErrors?.category?.[0]}
+            />
+            <DatePicker
+              label="Tanggal"
+              name="date"
+              required
+              error={state.fieldErrors?.date?.[0]}
+            />
+          </FormGrid>
+
+          <Textarea
+            name="description"
+            label="Deskripsi"
+            rows={4}
             required
-            className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Pilih kategori</option>
-            {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          {state.fieldErrors?.category && (
-            <p className="text-xs text-destructive">{state.fieldErrors.category[0]}</p>
-          )}
-        </div>
+            placeholder="Kronologi singkat, siapa yang terlibat, tindakan yang sudah diambil."
+            error={state.fieldErrors?.description?.[0]}
+          />
+        </FormCard>
 
-        <Input label="Tanggal" name="date" type="date" required error={state.fieldErrors?.date?.[0]} />
+        <FormCard title="Lokasi" description="Kamar dipilih kalau insiden terjadi di unit tertentu.">
+          <FormGrid>
+            <Select
+              name="propertyId"
+              label="Properti"
+              required
+              placeholder="Pilih properti"
+              value={selectedPropertyId}
+              onValueChange={(next) => {
+                setSelectedPropertyId(next);
+                setSelectedRoomId('');
+              }}
+              options={properties.map((property) => ({ value: property.id, label: property.name }))}
+              error={state.fieldErrors?.propertyId?.[0]}
+            />
 
-        {/* Property Selector */}
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="propertyId" className="text-sm font-medium text-foreground">
-            Properti <span className="text-destructive">*</span>
-          </label>
-          <select
-            id="propertyId"
-            name="propertyId"
-            required
-            value={selectedPropertyId}
-            onChange={(e) => setSelectedPropertyId(e.target.value)}
-            className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Pilih properti</option>
-            {properties.map((prop) => (
-              <option key={prop.id} value={prop.id}>
-                {prop.name}
-              </option>
-            ))}
-          </select>
-          {state.fieldErrors?.propertyId && (
-            <p className="text-xs text-destructive">{state.fieldErrors.propertyId[0]}</p>
-          )}
-        </div>
-
-        {selectedPropertyId ? (
-          <div className="flex flex-col gap-1.5 animate-in fade-in duration-200">
-            <label htmlFor="roomId" className="text-sm font-medium text-foreground">
-              Kamar / Unit (opsional)
-            </label>
-            <select
-              id="roomId"
+            <Select
               name="roomId"
-              defaultValue={initialRoomId ?? ''}
-              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Tidak terkait kamar/unit</option>
-              {filteredRooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  No. {room.number} {room.floor ? `(${room.floor.name})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Kamar / Unit (opsional)</label>
-            <select
-              disabled
-              className="h-9 rounded-md border border-input bg-surface px-3 text-sm text-foreground-subtle/50 opacity-60 cursor-not-allowed"
-            >
-              <option value="">Pilih properti terlebih dahulu</option>
-            </select>
-          </div>
-        )}
+              label="Kamar / Unit"
+              placeholder={selectedPropertyId ? 'Tidak terkait kamar/unit' : '—'}
+              allowEmpty
+              disabled={!selectedPropertyId}
+              {...(selectedPropertyId ? {} : { hint: 'Pilih properti terlebih dahulu.' })}
+              value={selectedRoomId}
+              onValueChange={setSelectedRoomId}
+              options={roomOptions}
+            />
 
-        <Input
-          label="Lokasi (jika bukan kamar, mis: Parkiran, Lobi)"
-          name="location"
-          placeholder="Parkiran, Lobi, dst"
-          error={state.fieldErrors?.location?.[0]}
-        />
-      </div>
+            <Input
+              label="Lokasi Lain"
+              name="location"
+              className="sm:col-span-2"
+              placeholder="Parkiran, Lobi, dst"
+              hint="Isi kalau insiden tidak terjadi di dalam kamar."
+              error={state.fieldErrors?.location?.[0]}
+            />
+          </FormGrid>
+        </FormCard>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="description" className="text-sm font-medium text-foreground">
-          Deskripsi <span className="text-destructive">*</span>
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          rows={4}
-          required
-          className="rounded-md border border-input bg-surface px-3 py-2 text-sm text-foreground hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        {state.fieldErrors?.description && (
-          <p className="text-xs text-destructive">{state.fieldErrors.description[0]}</p>
-        )}
-      </div>
+        <FormError message={state.error} />
 
-      {state.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
-      )}
-
-      <Button type="submit" isLoading={isPending} className="self-start">
-        Simpan
-      </Button>
+        <FormStickyBar secondary="Laporan ini jadi dasar tindak lanjut — isi kronologi selagi masih segar.">
+          <Button type="submit" isLoading={isPending}>
+            Simpan Laporan
+          </Button>
+        </FormStickyBar>
+      </FormLayout>
     </form>
   );
 }

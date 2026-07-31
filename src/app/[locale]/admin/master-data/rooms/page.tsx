@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getPropertyScope } from '@/lib/property-scope';
+import { formatRupiah } from '@/lib/utils';
 import { roomService } from '@/services/room.service';
 import { propertyService } from '@/services/property.service';
 
@@ -139,39 +140,37 @@ export default async function RoomsPage({ searchParams }: Props) {
           )}
 
           {/* Rooms / Units List */}
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-surface-raised text-left text-foreground-muted">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Nomor/Nama Unit</th>
-                  <th className="px-4 py-3 font-medium">Lantai</th>
-                  <th className="px-4 py-3 font-medium">Harga / Bulan</th>
-                  <th className="px-4 py-3 font-medium">Okupansi</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium" />
+              <thead>
+                <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
+                  <th>Nomor/Nama Unit</th>
+                  <th>Lantai</th>
+                  <th className="text-right">Harga / Bulan</th>
+                  <th>Okupansi</th>
+                  <th>Status</th>
+                  <th />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {rooms.map((room) => (
-                  <tr key={room.id}>
-                    <td className="px-4 py-3 font-medium text-foreground">{room.number}</td>
-                    <td className="px-4 py-3 text-foreground-muted">
-                      {room.floor?.name || '-'}
+                  <tr key={room.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
+                    <td className="font-medium text-foreground">{room.number}</td>
+                    <td className="text-foreground-muted">{room.floor?.name || '—'}</td>
+                    <td className="text-right tabular-nums">
+                      {formatRupiah(room.price.toNumber())}
                     </td>
-                    <td className="px-4 py-3 text-foreground-muted">
-                      Rp {room.price.toNumber().toLocaleString('id-ID')}
-                    </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <Badge variant={room.contracts.length > 0 ? 'destructive' : 'success'}>
                         {room.contracts.length > 0 ? 'Terisi' : 'Tersedia'}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <Badge variant={room.isActive ? 'success' : 'outline'}>
                         {room.isActive ? 'Aktif' : 'Nonaktif'}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="pr-0 text-right">
                       <div className="flex justify-end gap-2">
                         <Link href={`/admin/master-data/rooms/${room.id}`}>
                           <Button variant="ghost" size="sm">
@@ -191,7 +190,7 @@ export default async function RoomsPage({ searchParams }: Props) {
                 ))}
                 {rooms.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-foreground-subtle">
+                    <td colSpan={6} className="py-8 text-center text-foreground-muted">
                       {selectedOccupancy === 'all'
                         ? 'Belum ada kamar atau unit hunian terdaftar.'
                         : 'Tidak ada unit pada filter ini.'}

@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { roomService } from '@/services/room.service';
 import { propertyService } from '@/services/property.service';
 
@@ -16,25 +16,25 @@ export default async function NewIncidentPage({ searchParams }: Props) {
   ]);
 
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Laporan Insiden Baru</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <IncidentForm
-            properties={properties.map((p) => ({ id: p.id, name: p.name }))}
-            rooms={rooms.map((r) => ({
-              id: r.id,
-              number: r.number,
-              propertyId: r.propertyId,
-              floor: r.floor ? { name: r.floor.name } : null,
-            }))}
-            initialPropertyId={propertyId}
-            initialRoomId={roomId}
-          />
-        </CardContent>
-      </Card>
+    <div className="flex max-w-5xl flex-col gap-8">
+      <PageHeader
+        title="Laporan Insiden Baru"
+        description="Catat kejadian selagi detailnya masih segar — laporan ini yang jadi dasar tindak lanjut."
+        backHref="/admin/incidents"
+        backLabel="Daftar Insiden"
+      />
+
+      <IncidentForm
+        properties={properties.map((p) => ({ id: p.id, name: p.name }))}
+        rooms={rooms.map((r) => ({
+          id: r.id,
+          number: r.number,
+          propertyId: r.propertyId,
+          floor: r.floor ? { name: r.floor.name } : null,
+        }))}
+        initialPropertyId={propertyId}
+        initialRoomId={roomId}
+      />
     </div>
   );
 }
