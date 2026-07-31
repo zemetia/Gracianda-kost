@@ -4,6 +4,16 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
@@ -110,62 +120,54 @@ export default async function ExpensesPage({ searchParams }: Props) {
             </CardContent>
           </Card>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
-                  <th>Tanggal</th>
-                  <th>Kategori</th>
-                  <th>Penerima</th>
-                  <th>Catatan</th>
-                  <th className="text-right">Nominal</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((expense) => (
-                  <tr key={expense.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
-                    <td className="whitespace-nowrap text-foreground-muted">
-                      {formatDate(expense.date, 'id-ID')}
-                    </td>
-                    <td>
-                      <Badge variant="outline">{expenseCategoryLabel(expense.category)}</Badge>
-                    </td>
-                    <td className="text-foreground">{expense.payee || '—'}</td>
-                    <td className="max-w-xs truncate text-foreground-muted">{expense.note || '—'}</td>
-                    <td className="text-right tabular-nums">{formatRupiah(expense.amount.toNumber())}</td>
-                    <td className="pr-0">
-                      {canManage && (
-                        <ExpenseRowActions
-                          id={expense.id}
-                          categoryLabel={expenseCategoryLabel(expense.category)}
-                          amount={expense.amount.toNumber()}
-                        />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {expenses.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-foreground-muted">
-                      Belum ada pengeluaran tercatat pada filter ini.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-              {expenses.length > 0 && (
-                <tfoot>
-                  <tr className="border-t border-border font-semibold">
-                    <td colSpan={4} className="py-2.5 pr-4">
-                      Total
-                    </td>
-                    <td className="py-2.5 pr-4 text-right tabular-nums">{formatRupiah(total)}</td>
-                    <td />
-                  </tr>
-                </tfoot>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tanggal</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead>Penerima</TableHead>
+                <TableHead>Catatan</TableHead>
+                <TableHead className="text-right">Nominal</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expenses.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell className="whitespace-nowrap text-foreground-muted">
+                    {formatDate(expense.date, 'id-ID')}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{expenseCategoryLabel(expense.category)}</Badge>
+                  </TableCell>
+                  <TableCell className="text-foreground">{expense.payee || '—'}</TableCell>
+                  <TableCell className="max-w-xs truncate text-foreground-muted">{expense.note || '—'}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatRupiah(expense.amount.toNumber())}</TableCell>
+                  <TableCell>
+                    {canManage && (
+                      <ExpenseRowActions
+                        id={expense.id}
+                        categoryLabel={expenseCategoryLabel(expense.category)}
+                        amount={expense.amount.toNumber()}
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {expenses.length === 0 && (
+                <TableEmpty colSpan={6}>Belum ada pengeluaran tercatat pada filter ini.</TableEmpty>
               )}
-            </table>
-          </div>
+            </TableBody>
+            {expenses.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4}>Total</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatRupiah(total)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            )}
+          </Table>
         </>
       )}
     </div>

@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { ChipGroup, ChipToggle } from '@/components/ui/Chip';
 import { FormCard, FormError, FormGrid, FormLayout, FormStickyBar } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -11,8 +12,14 @@ import { Textarea } from '@/components/ui/Textarea';
 
 import type { PropertyFormState } from './actions';
 
+interface Facility {
+  id: string;
+  name: string;
+}
+
 interface PropertyFormProps {
   action: (prevState: PropertyFormState, formData: FormData) => Promise<PropertyFormState>;
+  facilities: Facility[];
   initial?: {
     name: string;
     code: string;
@@ -20,13 +27,14 @@ interface PropertyFormProps {
     address: string | null;
     description: string | null;
     isActive: boolean;
+    facilityIds: string[];
   };
   submitLabel: string;
 }
 
 const initialState: PropertyFormState = {};
 
-export function PropertyForm({ action, initial, submitLabel }: PropertyFormProps) {
+export function PropertyForm({ action, facilities, initial, submitLabel }: PropertyFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
 
   return (
@@ -89,6 +97,29 @@ export function PropertyForm({ action, initial, submitLabel }: PropertyFormProps
             defaultValue={initial?.description ?? undefined}
             error={state.fieldErrors?.description?.[0]}
           />
+        </FormCard>
+
+        <FormCard
+          title="Fasilitas Umum"
+          description="Fasilitas bersama yang berlaku untuk seluruh properti — parkir, wifi, keamanan, dsb."
+        >
+          {facilities.length > 0 ? (
+            <ChipGroup>
+              {facilities.map((facility) => (
+                <ChipToggle
+                  key={facility.id}
+                  name="facilityIds"
+                  value={facility.id}
+                  label={facility.name}
+                  defaultChecked={initial?.facilityIds.includes(facility.id) ?? false}
+                />
+              ))}
+            </ChipGroup>
+          ) : (
+            <p className="text-sm text-foreground-muted">
+              Belum ada fasilitas umum — tambahkan di menu Fasilitas.
+            </p>
+          )}
         </FormCard>
 
         <FormCard title="Status" description="Properti nonaktif tidak bisa dipakai transaksi baru.">

@@ -18,5 +18,6 @@ export * from './Radio';
 export * from './SegmentedControl';
 export * from './Select';
 export * from './Sonner';
+export * from './Table';
 export * from './Textarea';
 export * from './Typography';

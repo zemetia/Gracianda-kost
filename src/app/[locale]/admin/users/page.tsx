@@ -1,4 +1,12 @@
 import { Badge } from '@/components/ui/Badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { ROLE_LABEL } from '@/config/roles';
 import { Link } from '@/i18n/navigation';
@@ -30,46 +38,46 @@ export default async function UsersPage() {
         </div>
       </section>
 
-      <section className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Nama</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Email</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Role</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Status</th>
-              <th className="py-2 text-right text-xs font-medium uppercase tracking-wide text-foreground-muted">Dibuat</th>
-            </tr>
-          </thead>
-          <tbody>
+      <section>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nama</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Dibuat</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-border">
-                <td className="py-2.5 pr-4 font-medium text-foreground">
+              <TableRow key={user.id}>
+                <TableCell className="font-medium text-foreground">
                   <Link href={`/admin/users/${user.id}`} className="hover:underline">
                     {user.name ?? '—'}
                   </Link>
                   {user.id === session?.user.id && (
                     <span className="ml-2 text-xs text-foreground-subtle">(kamu)</span>
                   )}
-                </td>
-                <td className="py-2.5 pr-4 text-foreground-muted">{user.email}</td>
-                <td className="py-2.5 pr-4">
+                </TableCell>
+                <TableCell className="text-foreground-muted">{user.email}</TableCell>
+                <TableCell>
                   <Badge variant={user.role === 'SUPER_ADMIN' ? 'default' : 'secondary'}>
                     {ROLE_LABEL[user.role] ?? user.role}
                   </Badge>
-                </td>
-                <td className="py-2.5 pr-4">
+                </TableCell>
+                <TableCell>
                   <Badge variant={user.isActive ? 'success' : 'destructive'}>
                     {user.isActive ? 'Aktif' : 'Nonaktif'}
                   </Badge>
-                </td>
-                <td className="py-2.5 text-right tabular-nums text-foreground-muted">
+                </TableCell>
+                <TableCell className="text-right tabular-nums text-foreground-muted">
                   {formatDate(user.createdAt, 'id-ID')}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </section>
     </div>
   );

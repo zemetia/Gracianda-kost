@@ -1,9 +1,13 @@
 import { PageHeader } from '@/components/ui/PageHeader';
+import { facilityService } from '@/services/facility.service';
 
 import { createPropertyAction } from '../actions';
 import { PropertyForm } from '../PropertyForm';
 
-export default function NewPropertyPage() {
+export default async function NewPropertyPage() {
+  const facilities = await facilityService.list();
+  const commonFacilities = facilities.filter((facility) => facility.category === 'COMMON');
+
   return (
     <div className="flex max-w-5xl flex-col gap-8">
       <PageHeader
@@ -13,7 +17,11 @@ export default function NewPropertyPage() {
         backLabel="Daftar Properti"
       />
 
-      <PropertyForm action={createPropertyAction} submitLabel="Simpan Properti" />
+      <PropertyForm
+        action={createPropertyAction}
+        facilities={commonFacilities}
+        submitLabel="Simpan Properti"
+      />
     </div>
   );
 }

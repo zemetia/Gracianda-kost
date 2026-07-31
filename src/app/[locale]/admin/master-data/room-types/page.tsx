@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getPropertyScope } from '@/lib/property-scope';
@@ -64,71 +65,60 @@ export default async function RoomTypesPage({ searchParams }: Props) {
       </div>
 
       {selectedPropertyId && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
-                <th>Nama Tipe</th>
-                <th className="text-right">Harga Acuan</th>
-                <th>Fasilitas</th>
-                <th className="text-right">Kamar</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+        <>
+          {roomTypes.length === 0 ? (
+            <p className="py-12 text-center text-sm text-foreground-muted">
+              Belum ada tipe kamar. Buat satu, lalu pilih tipenya saat menambah kamar.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {roomTypes.map((type) => (
-                <tr key={type.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
-                  <td className="font-medium text-foreground">{type.name}</td>
-                  <td className="text-right tabular-nums">
-                    {type.price ? formatRupiah(type.price.toNumber()) : '—'}
-                  </td>
-                  <td className="text-foreground-muted">
-                    {type.facilities.length > 0
-                      ? type.facilities.map((f) => f.facility.name).join(', ')
-                      : '—'}
-                  </td>
-                  <td className="text-right tabular-nums">
-                    <Link
-                      href={`/admin/master-data/rooms?propertyId=${selectedPropertyId}`}
-                      className="text-primary hover:underline"
-                    >
-                      {type._count.rooms}
-                    </Link>
-                  </td>
-                  <td>
+                <Card key={type.id} className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate text-base font-semibold text-foreground">{type.name}</p>
                     <Badge variant={type.isActive ? 'success' : 'outline'}>
                       {type.isActive ? 'Aktif' : 'Nonaktif'}
                     </Badge>
-                  </td>
-                  <td className="pr-0 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/admin/master-data/room-types/${type.id}`}>
-                        <Button variant="ghost" size="sm">
-                          Edit
+                  </div>
+
+                  <p className="text-lg font-semibold tracking-tight tabular-nums text-foreground">
+                    {type.price ? formatRupiah(type.price.toNumber()) : '—'}
+                    <span className="ml-1 text-xs font-normal text-foreground-muted">/bulan (acuan)</span>
+                  </p>
+
+                  <p className="line-clamp-2 text-sm text-foreground-muted">
+                    {type.facilities.length > 0
+                      ? type.facilities.map((f) => f.facility.name).join(', ')
+                      : 'Belum ada fasilitas ditambahkan.'}
+                  </p>
+
+                  <Link
+                    href={`/admin/master-data/rooms?propertyId=${selectedPropertyId}`}
+                    className="text-sm text-foreground-muted hover:text-primary hover:underline"
+                  >
+                    <span className="font-medium tabular-nums text-foreground">{type._count.rooms}</span>{' '}
+                    kamar memakai tipe ini
+                  </Link>
+
+                  <div className="mt-auto flex justify-end gap-2 border-t border-border pt-3">
+                    <Link href={`/admin/master-data/room-types/${type.id}`}>
+                      <Button variant="ghost" size="sm">
+                        Edit
+                      </Button>
+                    </Link>
+                    {type.isActive && (
+                      <form action={deactivateRoomTypeAction.bind(null, type.id)}>
+                        <Button variant="ghost" size="sm" type="submit">
+                          Nonaktifkan
                         </Button>
-                      </Link>
-                      {type.isActive && (
-                        <form action={deactivateRoomTypeAction.bind(null, type.id)}>
-                          <Button variant="ghost" size="sm" type="submit">
-                            Nonaktifkan
-                          </Button>
-                        </form>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                      </form>
+                    )}
+                  </div>
+                </Card>
               ))}
-              {roomTypes.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-foreground-muted">
-                    Belum ada tipe kamar. Buat satu, lalu pilih tipenya saat menambah kamar.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

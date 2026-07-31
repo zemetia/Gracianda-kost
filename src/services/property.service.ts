@@ -19,17 +19,34 @@ export const propertyService = {
   getById(id: string) {
     return prisma.property.findUnique({
       where: { id },
+      include: { facilities: { include: { facility: true } } },
     });
   },
 
   create(data: PropertyInput) {
-    return prisma.property.create({ data });
+    const { facilityIds, ...rest } = data;
+
+    return prisma.property.create({
+      data: {
+        ...rest,
+        facilities: { create: facilityIds.map((facilityId) => ({ facilityId })) },
+      },
+    });
   },
 
   update(id: string, data: PropertyInput) {
-    return prisma.property.update({
-      where: { id },
-      data,
+    const { facilityIds, ...rest } = data;
+
+    return prisma.$transaction(async (tx) => {
+      await tx.propertyFacility.deleteMany({ where: { propertyId: id } });
+
+      return tx.property.update({
+        where: { id },
+        data: {
+          ...rest,
+          facilities: { create: facilityIds.map((facilityId) => ({ facilityId })) },
+        },
+      });
     });
   },
 

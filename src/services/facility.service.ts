@@ -8,6 +8,11 @@ export const facilityService = {
     return prisma.facility.findMany({ orderBy: [{ category: 'asc' }, { name: 'asc' }] });
   },
 
+  /** Facilities assignable to a room/room type — common-area facilities belong to the property, not a unit. */
+  listAssignable() {
+    return prisma.facility.findMany({ where: { category: 'ROOM' }, orderBy: { name: 'asc' } });
+  },
+
   /** Adds how many rooms / room types reference the facility — deletion cascades to both. */
   listWithUsage() {
     return prisma.facility.findMany({

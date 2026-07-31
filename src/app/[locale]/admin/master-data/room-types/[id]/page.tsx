@@ -24,7 +24,7 @@ export default async function EditRoomTypePage({ params }: Props) {
   if (!roomType) notFound();
 
   const [facilities, attachments] = await Promise.all([
-    facilityService.list(),
+    facilityService.listAssignable(),
     attachmentService.listFor('ROOM_TYPE', id),
   ]);
 
@@ -45,7 +45,8 @@ export default async function EditRoomTypePage({ params }: Props) {
         initial={{
           name: roomType.name,
           description: roomType.description,
-          sizeSqm: roomType.sizeSqm ? roomType.sizeSqm.toNumber() : null,
+          lengthM: roomType.lengthM ? roomType.lengthM.toNumber() : null,
+          widthM: roomType.widthM ? roomType.widthM.toNumber() : null,
           price: roomType.price ? roomType.price.toNumber() : null,
           electricityMode: roomType.electricityMode,
           isActive: roomType.isActive,

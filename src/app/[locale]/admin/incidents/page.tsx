@@ -2,6 +2,15 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Select } from '@/components/ui/Select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
@@ -111,45 +120,37 @@ export default async function IncidentsPage({ searchParams }: Props) {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left">
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Tanggal</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Kategori</th>
-              <th className="py-2 pr-4 text-xs font-medium uppercase tracking-wide text-foreground-muted">Lokasi</th>
-              <th className="py-2 text-xs font-medium uppercase tracking-wide text-foreground-muted">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {incidents.map((incident) => (
-              <tr key={incident.id} className="border-b border-border">
-                <td className="py-2.5 pr-4 tabular-nums text-foreground-muted">
-                  {formatDate(incident.date, 'id-ID')}
-                </td>
-                <td className="py-2.5 pr-4 font-medium text-foreground">
-                  <Link href={`/admin/incidents/${incident.id}`} className="hover:underline">
-                    {CATEGORY_LABEL[incident.category]}
-                  </Link>
-                </td>
-                <td className="py-2.5 pr-4 text-foreground-muted">
-                  {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
-                </td>
-                <td className="py-2.5">
-                  <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>
-                </td>
-              </tr>
-            ))}
-            {incidents.length === 0 && (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-foreground-muted">
-                  Belum ada insiden tercatat.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tanggal</TableHead>
+            <TableHead>Kategori</TableHead>
+            <TableHead>Lokasi</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {incidents.map((incident) => (
+            <TableRow key={incident.id}>
+              <TableCell className="tabular-nums text-foreground-muted">
+                {formatDate(incident.date, 'id-ID')}
+              </TableCell>
+              <TableCell className="font-medium text-foreground">
+                <Link href={`/admin/incidents/${incident.id}`} className="hover:underline">
+                  {CATEGORY_LABEL[incident.category]}
+                </Link>
+              </TableCell>
+              <TableCell className="text-foreground-muted">
+                {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
+              </TableCell>
+              <TableCell>
+                <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+          {incidents.length === 0 && <TableEmpty colSpan={4}>Belum ada insiden tercatat.</TableEmpty>}
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -2,6 +2,15 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmpty,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
@@ -181,92 +190,86 @@ export default async function PaymentsPage({ searchParams }: Props) {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left [&>th]:py-2 [&>th]:pr-4 [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-foreground-muted">
-              <th>Penyewa</th>
-              <th>Kamar</th>
-              <th>Periode</th>
-              <th className="text-right">Sisa Tagihan</th>
-              <th>Status</th>
-              <th>Ditagih</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map(({ payment, status, outstanding }) => {
-              const lastReminder = payment.reminders[0];
-              return (
-                <tr key={payment.id} className="border-b border-border [&>td]:py-2.5 [&>td]:pr-4">
-                  <td>
-                    <Link href={`/admin/payments/${payment.id}`} className="font-medium text-foreground hover:underline">
-                      {payment.contract.tenant.fullName}
-                    </Link>
-                    <span className="block text-xs text-foreground-muted">
-                      {payment.contract.contractCode}
-                    </span>
-                  </td>
-                  <td className="text-foreground-muted">
-                    {payment.contract.room.property.name} — No. {payment.contract.room.number}
-                    {payment.contract.room.floor ? ` (${payment.contract.room.floor.name})` : ''}
-                  </td>
-                  <td className="text-foreground-muted">
-                    {MONTH_NAMES_ID[payment.periodMonth - 1]} {payment.periodYear}
-                    <span className="block text-xs tabular-nums text-foreground-muted">
-                      Jatuh tempo {formatDate(payment.dueDate, 'id-ID')}
-                    </span>
-                  </td>
-                  <td className="text-right font-medium tabular-nums text-foreground">
-                    {outstanding > 0 ? formatRupiah(outstanding) : '—'}
-                  </td>
-                  <td>
-                    <PaymentStatusBadge status={status} />
-                  </td>
-                  <td className="text-xs tabular-nums text-foreground-muted">
-                    {lastReminder ? formatDate(lastReminder.sentAt, 'id-ID') : '—'}
-                  </td>
-                  <td className="pr-0">
-                    <div className="flex justify-end gap-2">
-                      {status !== 'PAID' && (
-                        <SendWaButton
-                          size="xs"
-                          label="WA"
-                          paymentId={payment.id}
-                          phone={payment.contract.tenant.phone}
-                          tenantName={payment.contract.tenant.fullName}
-                          contractCode={payment.contract.contractCode}
-                          roomNumber={payment.contract.room.number}
-                          periodMonth={payment.periodMonth}
-                          periodYear={payment.periodYear}
-                          amountDue={payment.amountDue.toNumber()}
-                          amountPaid={payment.amountPaid.toNumber()}
-                          dueDate={payment.dueDate}
-                        />
-                      )}
-                      {canManage && status !== 'PAID' && (
-                        <MarkPaidButton
-                          paymentId={payment.id}
-                          paymentMethods={paymentMethodOptions}
-                          size="xs"
-                          label="Lunas"
-                        />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {visibleRows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="py-8 text-center text-foreground-muted">
-                  Tidak ada tagihan pada filter ini.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Penyewa</TableHead>
+            <TableHead>Kamar</TableHead>
+            <TableHead>Periode</TableHead>
+            <TableHead className="text-right">Sisa Tagihan</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Ditagih</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {visibleRows.map(({ payment, status, outstanding }) => {
+            const lastReminder = payment.reminders[0];
+            return (
+              <TableRow key={payment.id}>
+                <TableCell>
+                  <Link href={`/admin/payments/${payment.id}`} className="font-medium text-foreground hover:underline">
+                    {payment.contract.tenant.fullName}
+                  </Link>
+                  <span className="block text-xs text-foreground-muted">
+                    {payment.contract.contractCode}
+                  </span>
+                </TableCell>
+                <TableCell className="text-foreground-muted">
+                  {payment.contract.room.property.name} — No. {payment.contract.room.number}
+                  {payment.contract.room.floor ? ` (${payment.contract.room.floor.name})` : ''}
+                </TableCell>
+                <TableCell className="text-foreground-muted">
+                  {MONTH_NAMES_ID[payment.periodMonth - 1]} {payment.periodYear}
+                  <span className="block text-xs tabular-nums text-foreground-muted">
+                    Jatuh tempo {formatDate(payment.dueDate, 'id-ID')}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right font-medium tabular-nums text-foreground">
+                  {outstanding > 0 ? formatRupiah(outstanding) : '—'}
+                </TableCell>
+                <TableCell>
+                  <PaymentStatusBadge status={status} />
+                </TableCell>
+                <TableCell className="text-xs tabular-nums text-foreground-muted">
+                  {lastReminder ? formatDate(lastReminder.sentAt, 'id-ID') : '—'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    {status !== 'PAID' && (
+                      <SendWaButton
+                        size="xs"
+                        label="WA"
+                        paymentId={payment.id}
+                        phone={payment.contract.tenant.phone}
+                        tenantName={payment.contract.tenant.fullName}
+                        contractCode={payment.contract.contractCode}
+                        roomNumber={payment.contract.room.number}
+                        periodMonth={payment.periodMonth}
+                        periodYear={payment.periodYear}
+                        amountDue={payment.amountDue.toNumber()}
+                        amountPaid={payment.amountPaid.toNumber()}
+                        dueDate={payment.dueDate}
+                      />
+                    )}
+                    {canManage && status !== 'PAID' && (
+                      <MarkPaidButton
+                        paymentId={payment.id}
+                        paymentMethods={paymentMethodOptions}
+                        size="xs"
+                        label="Lunas"
+                      />
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {visibleRows.length === 0 && (
+            <TableEmpty colSpan={7}>Tidak ada tagihan pada filter ini.</TableEmpty>
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

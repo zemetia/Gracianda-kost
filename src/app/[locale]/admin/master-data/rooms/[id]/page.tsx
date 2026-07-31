@@ -37,7 +37,7 @@ export default async function EditRoomPage({ params }: Props) {
   const [floors, facilities, roomTypes, ownAttachments, history, activeContract] = await Promise.all(
     [
       roomService.listFloors(room.propertyId),
-      facilityService.list(),
+      facilityService.listAssignable(),
       roomTypeService.getFormDefaults(room.propertyId),
       attachmentService.listFor('ROOM', id),
       roomService.getRoomHistory(id),
@@ -140,7 +140,8 @@ export default async function EditRoomPage({ params }: Props) {
               floorId: room.floorId,
               roomTypeId: room.roomTypeId,
               price: room.price.toNumber(),
-              sizeSqm: room.sizeSqm ? room.sizeSqm.toNumber() : null,
+              lengthM: room.lengthM ? room.lengthM.toNumber() : null,
+              widthM: room.widthM ? room.widthM.toNumber() : null,
               description: room.description,
               electricityMode: room.electricityMode,
               isActive: room.isActive,

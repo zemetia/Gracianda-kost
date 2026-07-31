@@ -7,6 +7,7 @@ export const propertySchema = z.object({
   description: z.string().max(2000).optional().nullable(),
   type: z.enum(['KOST', 'HOUSE', 'APARTMENT', 'VILLA', 'OTHER']).default('KOST'),
   isActive: z.coerce.boolean().default(true),
+  facilityIds: z.array(z.string()).default([]),
 });
 
 export const floorSchema = z.object({
@@ -21,7 +22,8 @@ export const roomTypeSchema = z.object({
   name: z.string().min(1, 'Nama tipe wajib diisi').max(100),
   propertyId: z.string().min(1, 'Properti wajib dipilih'),
   description: z.string().max(2000).optional().nullable(),
-  sizeSqm: z.coerce.number().positive().optional().nullable(),
+  lengthM: z.coerce.number().positive().optional().nullable(),
+  widthM: z.coerce.number().positive().optional().nullable(),
   price: z.coerce.number().positive().optional().nullable().or(z.literal(0)),
   electricityMode: electricityModeSchema,
   isActive: z.coerce.boolean().default(true),
@@ -39,7 +41,8 @@ export const roomSchema = z.object({
   floorId: z.string().optional().nullable(),
   roomTypeId: z.string().optional().nullable(),
   price: z.coerce.number().positive('Harga harus lebih dari 0'),
-  sizeSqm: z.coerce.number().positive().optional().nullable(),
+  lengthM: z.coerce.number().positive().optional().nullable(),
+  widthM: z.coerce.number().positive().optional().nullable(),
   description: z.string().max(2000).optional().nullable(),
   electricityMode: electricityModeSchema,
   isActive: z.coerce.boolean().default(true),

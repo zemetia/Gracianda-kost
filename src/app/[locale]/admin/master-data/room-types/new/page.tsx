@@ -18,7 +18,7 @@ export default async function NewRoomTypePage({ searchParams }: Props) {
   const property = await propertyService.getById(propertyId);
   if (!property) notFound();
 
-  const facilities = await facilityService.list();
+  const facilities = await facilityService.listAssignable();
 
   return (
     <div className="flex max-w-5xl flex-col gap-8">

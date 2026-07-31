@@ -24,24 +24,19 @@ interface Floor {
 interface Facility {
   id: string;
   name: string;
-  category: 'COMMON' | 'ROOM';
 }
 
 export interface RoomTypeOption {
   id: string;
   name: string;
   description: string | null;
-  sizeSqm: number | null;
+  lengthM: number | null;
+  widthM: number | null;
   price: number | null;
   electricityMode: ElectricityMode;
   facilityIds: string[];
   prices: { billingCycle: string; interval: number; price: number }[];
 }
-
-const FACILITY_GROUPS = [
-  { category: 'ROOM', label: 'Fasilitas Kamar' },
-  { category: 'COMMON', label: 'Fasilitas Umum' },
-] as const;
 
 type TierValues = Record<PriceTierField, number | ''>;
 
@@ -60,7 +55,8 @@ interface RoomFormProps {
     floorId: string | null;
     roomTypeId: string | null;
     price: number;
-    sizeSqm: number | null;
+    lengthM: number | null;
+    widthM: number | null;
     description: string | null;
     electricityMode: ElectricityMode;
     isActive: boolean;
@@ -118,7 +114,7 @@ export function RoomForm({
 
       <FormLayout>
         <FormCard title="Identitas Unit" description="Nomor kamar dan posisinya di dalam properti.">
-          <FormGrid columns={3}>
+          <FormGrid columns={2}>
             <Input
               label="Nomor / Nama Unit"
               name="number"
@@ -135,16 +131,30 @@ export function RoomForm({
               options={floors.map((floor) => ({ value: floor.id, label: floor.name }))}
               error={state.fieldErrors?.floorId?.[0]}
             />
+          </FormGrid>
+
+          <FormGrid columns={2}>
             <Input
-              label="Ukuran"
-              name="sizeSqm"
+              label="Panjang"
+              name="lengthM"
               type="number"
               min={0}
               step="0.1"
-              rightAddon="m²"
+              rightAddon="m"
               inputClassName="text-right tabular-nums"
-              defaultValue={initial?.sizeSqm ?? undefined}
-              error={state.fieldErrors?.sizeSqm?.[0]}
+              defaultValue={initial?.lengthM ?? undefined}
+              error={state.fieldErrors?.lengthM?.[0]}
+            />
+            <Input
+              label="Lebar"
+              name="widthM"
+              type="number"
+              min={0}
+              step="0.1"
+              rightAddon="m"
+              inputClassName="text-right tabular-nums"
+              defaultValue={initial?.widthM ?? undefined}
+              error={state.fieldErrors?.widthM?.[0]}
             />
           </FormGrid>
 
@@ -252,24 +262,17 @@ export function RoomForm({
             </div>
           ) : facilities.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {FACILITY_GROUPS.map(({ category, label }) => {
-                const items = facilities.filter((facility) => facility.category === category);
-                if (items.length === 0) return null;
-
-                return (
-                  <ChipGroup key={category} label={label}>
-                    {items.map((facility) => (
-                      <ChipToggle
-                        key={`${roomTypeId}-${facility.id}`}
-                        name="facilityIds"
-                        value={facility.id}
-                        label={facility.name}
-                        defaultChecked={initial?.facilityIds.includes(facility.id) ?? false}
-                      />
-                    ))}
-                  </ChipGroup>
-                );
-              })}
+              <ChipGroup label="Fasilitas Kamar">
+                {facilities.map((facility) => (
+                  <ChipToggle
+                    key={`${roomTypeId}-${facility.id}`}
+                    name="facilityIds"
+                    value={facility.id}
+                    label={facility.name}
+                    defaultChecked={initial?.facilityIds.includes(facility.id) ?? false}
+                  />
+                ))}
+              </ChipGroup>
               {selectedType && (
                 <div>
                   <Button
