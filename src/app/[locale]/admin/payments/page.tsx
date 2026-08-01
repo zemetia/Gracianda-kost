@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { Money } from '@/components/ui/Money';
 import { Select } from '@/components/ui/Select';
 import {
   Table,
@@ -15,7 +16,7 @@ import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
-import { formatDate, formatNumber, formatRupiah } from '@/lib/utils';
+import { formatDate, formatNumber } from '@/lib/utils';
 import { paymentMethodService } from '@/services/payment-method.service';
 import {
   getPaymentBucket,
@@ -145,7 +146,7 @@ export default async function PaymentsPage({ searchParams }: Props) {
               {formatNumber(tab.count)}
             </span>
             <span className="mt-1 block text-xs text-foreground-muted">
-              {tab.value !== 'PAID' && tab.amount > 0 ? formatRupiah(tab.amount) : ' '}
+              {tab.value !== 'PAID' && tab.amount > 0 ? <Money value={tab.amount} size="meta" tone="muted" /> : ' '}
             </span>
           </Link>
         ))}
@@ -225,8 +226,11 @@ export default async function PaymentsPage({ searchParams }: Props) {
                     Jatuh tempo {formatDate(payment.dueDate, 'id-ID')}
                   </span>
                 </TableCell>
-                <TableCell className="text-right font-medium tabular-nums text-foreground">
-                  {outstanding > 0 ? formatRupiah(outstanding) : '—'}
+                <TableCell className="text-right">
+                  <Money
+                    value={outstanding > 0 ? outstanding : null}
+                    tone={status === 'OVERDUE' ? 'destructive' : undefined}
+                  />
                 </TableCell>
                 <TableCell>
                   <PaymentStatusBadge status={status} />

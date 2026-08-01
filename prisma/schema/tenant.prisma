@@ -1,12 +1,44 @@
+// Jenis kelamin penghuni — dicocokkan dengan Property.genderPolicy
+// (PUTRA/PUTRI/CAMPUR) sebagai peringatan saat membuat kontrak, bukan blokir.
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum MaritalStatus {
+  BELUM_MENIKAH
+  MENIKAH
+  CERAI
+}
+
 model Tenant {
-  id            String   @id @default(cuid())
-  fullName      String
-  email         String?
-  phone         String
-  ktpNumber     String   @unique
-  occupation    String?
-  vehicleType   String? // "Motor Honda Beat", "Mobil Avanza"
-  vehiclePlate  String?
+  id        String  @id @default(cuid())
+  fullName  String
+  email     String?
+  phone     String
+  ktpNumber String  @unique
+
+  // Identitas
+  gender        Gender?
+  birthPlace    String?
+  birthDate     DateTime?
+  maritalStatus MaritalStatus?
+  // Alamat asal sesuai KTP — dipakai saat penyewa harus dipulangkan/ditagih
+  // ke keluarga, jadi disimpan utuh sebagai satu blok teks.
+  idAddress     String?
+
+  occupation   String?
+  // Kantor / kampus / sekolah — konteks pekerjaan itu sendiri.
+  institution  String?
+  vehicleType  String? // "Motor Honda Beat", "Mobil Avanza"
+  vehiclePlate String?
+
+  // Kontak darurat: satu-satunya cara menghubungi keluarga saat penyewa
+  // sakit, kabur, atau menunggak — wajib ada di form, opsional di data lama.
+  emergencyName     String?
+  emergencyRelation String?
+  emergencyPhone    String?
+
   isBlacklisted Boolean  @default(false)
   blacklistNote String?
   createdAt     DateTime @default(now())
@@ -76,14 +108,23 @@ model Contract {
   @@map("contracts")
 }
 
-// "Nama Penghuni Tambahan" — lives with the tenant but isn't the contract holder.
+// "Penghuni Tambahan" — tinggal bersama penyewa tapi bukan pemegang kontrak.
+// Jumlahnya tidak dibatasi: satu kamar bisa diisi 2, 3, atau lebih orang, dan
+// setiap orang tetap punya identitas sendiri karena yang dicari saat ada
+// insiden adalah orangnya, bukan sekadar jumlahnya.
 model ContractOccupant {
   id         String   @id @default(cuid())
   contractId String
   contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   fullName   String
-  relation   String?
+  relation   String? // "Suami", "Anak", "Teman", "Saudara"
+  gender     Gender?
+  phone      String?
+  ktpNumber  String? // sengaja tidak unique — bukan pemegang kontrak
+  occupation String?
+  notes      String?
 
+  @@index([contractId])
   @@map("contract_occupants")
 }
 

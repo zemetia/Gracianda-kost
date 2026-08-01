@@ -1,10 +1,10 @@
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Money } from '@/components/ui/Money';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getPropertyScope } from '@/lib/property-scope';
-import { formatRupiah } from '@/lib/utils';
 import { propertyService } from '@/services/property.service';
 import { roomTypeService } from '@/services/room-type.service';
 
@@ -81,8 +81,8 @@ export default async function RoomTypesPage({ searchParams }: Props) {
                     </Badge>
                   </div>
 
-                  <p className="text-lg font-semibold tracking-tight tabular-nums text-foreground">
-                    {type.price ? formatRupiah(type.price.toNumber()) : '—'}
+                  <p>
+                    <Money value={type.price ? type.price.toNumber() : null} size="total" />
                     <span className="ml-1 text-xs font-normal text-foreground-muted">/bulan (acuan)</span>
                   </p>
 

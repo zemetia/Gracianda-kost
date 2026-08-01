@@ -55,8 +55,8 @@ On this light palette that test is brutal, and that is the point: a `bg-surface`
 | 9 | No decorative icon per metric; icons only when they carry meaning | `Icon` in a `rounded-lg bg-primary-subtle` square on every tile |
 | 10 | No elevation on metric surfaces | `hover:shadow-md`, `glow-primary`, `border-gradient`, `shadow-primary-glow` |
 | 11 | Whitespace generous and consistent — vertical rhythm beats density | Cramped `p-3` tiles |
-| 12 | Metric text is `font-sans` (Outfit) | `font-mono` on a KPI value — JetBrains Mono is for IDs, code, and hashes |
-| 13 | Weight ceiling is `font-semibold` | `font-bold` reads as shouting at metric sizes |
+| 12 | Metric text inherits the page face — Inter inside `/admin`, Outfit on public pages (see §8a) | `font-mono` on a KPI value — JetBrains Mono is for IDs, code, and hashes |
+| 13 | Weight ceiling is `font-semibold` at metric sizes (`secondary` and up); money at row size is `font-bold` | `font-bold` on a hero figure — shouting; `font-medium` on a table amount — it disappears into the row |
 | 14 | Metric values never use the `Typography` component | `<Typography variant="h3">Rp 12.400.000</Typography>` — headings and metrics are different scales |
 
 ---
@@ -223,6 +223,33 @@ All business figures are `id-ID`. Locale switches labels on public pages; it nev
 
 **One formatter, shared.** [src/lib/utils.ts](../../src/lib/utils.ts) exports `formatRupiah`, `formatRupiahShort`, `formatNumber`, `formatPercent`, and `formatDate` — the only implementations. Never redefine one locally, and never call `toLocaleString('id-ID')` in a component.
 
+### 8a. Money renders through `Money`, not through a class list
+
+[src/components/ui/Money/](../../src/components/ui/Money/) is the only place Rupiah gets its type
+treatment. Call it anywhere an amount is *displayed* — table cell, footer total, list row, detail
+pair, form preview:
+
+```tsx
+<TableCell className="text-right"><Money value={expense.amount.toNumber()} /></TableCell>
+<TableCell className="text-right"><Money value={total} size="total" /></TableCell>
+```
+
+| Prop | Use |
+|---|---|
+| `size` | `hero` · `primary` · `secondary` — metric tiers, `font-semibold`; `total` — table footers; `inline` (default) — rows and cells, `font-bold`; `meta` — hints and captions |
+| `tone` | `default` · `muted` · `primary` · `destructive` · `success`. Omit it and zero mutes itself |
+| `short` | `Rp 12,4 jt` — hero figures and chart labels only |
+| `signed` | Renders `+` on positives, for cash flow and selisih |
+| `muteZero` | `false` keeps a zero at full weight when it is the point of the column |
+
+Two rules it encodes, so no page re-decides them: **`Rp` is a unit** — always one size step down,
+`font-normal`, `text-foreground-muted`, never the same weight as the digits; and **the digits carry
+the weight** — `font-bold` at row size, where `font-medium` sinks into the label beside it.
+
+`null` / `undefined` renders `—` muted, so a missing amount needs no ternary at the call site.
+`formatRupiah()` stays the formatter for *strings* — WhatsApp templates, `CardDescription` prose,
+`aria-label`, dialog copy. Never hand-build a money `<span>` again.
+
 **Language.** Admin surfaces are Indonesian copy written inline — there are no admin translation namespaces (`messages/*` covers `common`, `home`, `navigation` only). Don't invent translation keys for admin metric labels; do use next-intl for anything on the public site.
 
 ---
@@ -319,6 +346,7 @@ Skeletons mirror the typography, not a box:
 | `DeltaPill` | Percentage pill; `goodWhen: 'up' \| 'down'` decides the tone, `null` renders `—` |
 | `MetricInline` | Compact label-left / value-right row for narrow panels and detail pages |
 | `MetricSkeleton` | §12 loading state — mirrors the typography, not a box |
+| `Money` | Every displayed Rupiah amount — see §8a |
 
 `delta` is omitted entirely when there is nothing to compare; pass `null` when a baseline is expected but missing (new property, zero last month) so the block still renders `—` and keeps its slot.
 

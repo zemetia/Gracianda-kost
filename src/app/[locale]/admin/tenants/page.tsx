@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { genderLabel } from '@/lib/tenant';
 import { tenantService } from '@/services/tenant.service';
 
 interface Props {
@@ -50,6 +51,7 @@ export default async function TenantsPage({ searchParams }: Props) {
           <TableRow>
             <TableHead>Nama</TableHead>
             <TableHead>KTP</TableHead>
+            <TableHead>Jenis Kelamin</TableHead>
             <TableHead>HP</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
@@ -63,11 +65,12 @@ export default async function TenantsPage({ searchParams }: Props) {
                 </Link>
               </TableCell>
               <TableCell className="tabular-nums text-foreground-muted">{tenant.ktpNumber}</TableCell>
+              <TableCell className="text-foreground-muted">{genderLabel(tenant.gender)}</TableCell>
               <TableCell className="tabular-nums text-foreground-muted">{tenant.phone}</TableCell>
               <TableCell>{tenant.isBlacklisted && <Badge variant="destructive">Blacklist</Badge>}</TableCell>
             </TableRow>
           ))}
-          {tenants.length === 0 && <TableEmpty colSpan={4}>Tidak ada penyewa ditemukan.</TableEmpty>}
+          {tenants.length === 0 && <TableEmpty colSpan={5}>Tidak ada penyewa ditemukan.</TableEmpty>}
         </TableBody>
       </Table>
     </div>

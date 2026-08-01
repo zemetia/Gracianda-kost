@@ -19,16 +19,54 @@ enum PropertyType {
   OTHER
 }
 
+// Who the property accepts. CAMPUR means both, which is also the safe default
+// for non-kost types (a whole house or villa has no gender rule).
+enum GenderPolicy {
+  PUTRA
+  PUTRI
+  CAMPUR
+}
+
 model Property {
   id          String       @id @default(cuid())
   name        String       @unique
   code        String       @unique
-  address     String?
   description String?
   type        PropertyType @default(KOST)
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  // ── Lokasi ──────────────────────────────────────────────────────────────
+  // `address` is the street line only (jalan, nomor, RT/RW); the
+  // administrative levels are separate columns so lists can filter by city
+  // and the public page can print a proper postal address. Format the whole
+  // thing with formatPropertyAddress() — never concatenate ad hoc.
+  address    String?
+  district   String? // Kecamatan
+  city       String? // Kota / Kabupaten
+  province   String?
+  postalCode String?
+  // Coordinates are for a map pin; `mapsUrl` is the shareable link an admin
+  // pastes from Google Maps. Either can exist without the other.
+  latitude   Decimal? @db.Decimal(10, 7)
+  longitude  Decimal? @db.Decimal(10, 7)
+  mapsUrl    String?
+
+  // ── Kontak penanggung jawab ─────────────────────────────────────────────
+  // Per property, not per company: a portfolio can have a different penjaga
+  // per building. siteConfig stays the brand-level fallback.
+  contactName    String?
+  contactPhone   String?
+  whatsappNumber String?
+  contactEmail   String?
+
+  // ── Aturan & operasional ────────────────────────────────────────────────
+  genderPolicy GenderPolicy @default(CAMPUR)
+  // "22:00" style, stored as text — it is a wall-clock house rule, not an
+  // instant, so a DateTime would only invite timezone bugs.
+  curfewTime   String?
+  rules        String?
 
   floors      Floor[]
   rooms       Room[]

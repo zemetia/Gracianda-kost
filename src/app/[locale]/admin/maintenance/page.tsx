@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { Money } from '@/components/ui/Money';
 import { Select } from '@/components/ui/Select';
 import {
   Table,
@@ -16,7 +17,7 @@ import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
-import { formatDate, formatRupiah } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { maintenanceService } from '@/services/maintenance.service';
 import { roomService } from '@/services/room.service';
 
@@ -128,8 +129,8 @@ export default async function MaintenancePage({ searchParams }: Props) {
                 </div>
               </TableCell>
               <TableCell className="text-foreground">{record.category}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {record.cost ? formatRupiah(record.cost.toNumber()) : '—'}
+              <TableCell className="text-right">
+                <Money value={record.cost ? record.cost.toNumber() : null} />
               </TableCell>
               <TableCell className="text-foreground-muted">{record.vendor ?? '—'}</TableCell>
             </TableRow>

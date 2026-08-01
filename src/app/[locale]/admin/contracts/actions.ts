@@ -23,13 +23,36 @@ export interface ContractFormState {
   fieldErrors?: Record<string, string[]>;
 }
 
+const OCCUPANT_FIELDS = [
+  'fullName',
+  'relation',
+  'gender',
+  'phone',
+  'ktpNumber',
+  'occupation',
+  'notes',
+] as const;
+
+/**
+ * The occupant rows submit one value per field name, in row order — every row
+ * renders every input (Select writes a hidden input even when empty), so the
+ * lists line up and can be zipped back into objects. Rows left without a name
+ * are dropped rather than rejected: an admin who clicked "Tambah Penghuni" once
+ * too often should not get a validation error.
+ */
 function parseOccupants(formData: FormData) {
-  const raw = String(formData.get('occupantNames') ?? '');
-  return raw
-    .split(',')
-    .map((name) => name.trim())
-    .filter(Boolean)
-    .map((fullName) => ({ fullName }));
+  const columns = Object.fromEntries(
+    OCCUPANT_FIELDS.map((field) => [
+      field,
+      formData.getAll(`occupant${field[0]?.toUpperCase()}${field.slice(1)}`).map(String),
+    ]),
+  ) as Record<(typeof OCCUPANT_FIELDS)[number], string[]>;
+
+  return (columns.fullName ?? [])
+    .map((_, index) =>
+      Object.fromEntries(OCCUPANT_FIELDS.map((field) => [field, columns[field][index] ?? ''])),
+    )
+    .filter((occupant) => String(occupant.fullName).trim());
 }
 
 export async function createContractAction(
@@ -45,12 +68,21 @@ export async function createContractAction(
   if (mode === 'new') {
     const tenantParsed = tenantSchema.safeParse({
       fullName: formData.get('fullName'),
-      email: formData.get('email') || undefined,
+      email: formData.get('email'),
       phone: formData.get('phone'),
       ktpNumber: formData.get('ktpNumber'),
-      occupation: formData.get('occupation') || undefined,
-      vehicleType: formData.get('vehicleType') || undefined,
-      vehiclePlate: formData.get('vehiclePlate') || undefined,
+      gender: formData.get('gender'),
+      birthPlace: formData.get('birthPlace'),
+      birthDate: formData.get('birthDate'),
+      maritalStatus: formData.get('maritalStatus'),
+      idAddress: formData.get('idAddress'),
+      occupation: formData.get('occupation'),
+      institution: formData.get('institution'),
+      vehicleType: formData.get('vehicleType'),
+      vehiclePlate: formData.get('vehiclePlate'),
+      emergencyName: formData.get('emergencyName'),
+      emergencyRelation: formData.get('emergencyRelation'),
+      emergencyPhone: formData.get('emergencyPhone'),
     });
     if (!tenantParsed.success) return { fieldErrors: tenantParsed.error.flatten().fieldErrors };
     tenant = tenantParsed.data;

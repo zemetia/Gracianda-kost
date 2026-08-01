@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { JetBrains_Mono, Outfit } from 'next/font/google';
+import { Inter, JetBrains_Mono, Outfit } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
@@ -16,6 +16,15 @@ const outfit = Outfit({
   variable: '--font-outfit',
   display: 'swap',
   weight: ['300', '400', '500', '600', '700', '800'],
+});
+
+/* Admin only. Outfit is a display face — charming on the landing page, mushy in a
+   dense table of numbers. Inter is the dashboard workhorse: high x-height, real
+   tabular figures, and legible at 12px where admin lives. */
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -60,7 +69,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html
       lang={locale}
-      className={`${outfit.variable} ${jetbrainsMono.variable}`}
+      className={`${outfit.variable} ${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body>

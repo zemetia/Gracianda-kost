@@ -28,7 +28,7 @@ export default async function AdminLayout({ children, params }: Props) {
   ]);
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row bg-background">
+    <div data-admin-shell className="flex min-h-screen flex-col md:flex-row bg-background">
       <AdminSidebar role={session.user.role} userName={session.user.name ?? session.user.email ?? ''} />
       <div className="flex flex-1 flex-col">
         {/* The scope lives above every module, not inside one of them, so it

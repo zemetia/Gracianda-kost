@@ -6,6 +6,7 @@ export const propertyService = {
   list() {
     return prisma.property.findMany({
       orderBy: { name: 'asc' },
+      include: { _count: { select: { rooms: true, floors: true } } },
     });
   },
 
@@ -16,11 +17,20 @@ export const propertyService = {
     });
   },
 
-  getById(id: string) {
-    return prisma.property.findUnique({
+  async getById(id: string) {
+    const property = await prisma.property.findUnique({
       where: { id },
       include: { facilities: { include: { facility: true } } },
     });
+    if (!property) return null;
+
+    // Coordinates leave the service as plain numbers — nothing above this layer
+    // should have to know they are Decimal.
+    return {
+      ...property,
+      latitude: property.latitude?.toNumber() ?? null,
+      longitude: property.longitude?.toNumber() ?? null,
+    };
   },
 
   create(data: PropertyInput) {

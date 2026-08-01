@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Badge';
 import { MetricBlock, MetricInline, MetricRow } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
 import { formatDate, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '@/lib/utils';
@@ -197,9 +198,8 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
               <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
                 Tren Pendapatan · 6 Bulan
               </p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-                <span className="mr-1 text-lg font-normal text-foreground-muted">Rp</span>
-                {formatNumber(trendTotal)}
+              <p className="mt-2">
+                <Money value={trendTotal} size="primary" />
               </p>
               <p className="mt-1 text-xs text-foreground-muted">
                 Rata-rata {formatRupiahShort(trendTotal / revenueTrend.length)} per bulan

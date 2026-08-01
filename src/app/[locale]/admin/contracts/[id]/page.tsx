@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { MetricInline } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { genderLabel } from '@/lib/tenant';
 import { formatDate, formatRupiah } from '@/lib/utils';
 import { contractService } from '@/services/contract.service';
 import { paymentService } from '@/services/payment.service';
@@ -108,11 +110,18 @@ export default async function ContractDetailPage({ params, searchParams }: Props
         <div className="mt-3">
           <MetricInline
             label="Harga sewa"
-            value={`${formatRupiah(contract.rentPrice.toNumber())} / ${formatBillingCycle(contract.billingCycle, contract.billingInterval)}`}
+            value={
+              <>
+                <Money value={contract.rentPrice.toNumber()} />
+                <span className="ml-1 text-xs font-normal text-foreground-muted">
+                  / {formatBillingCycle(contract.billingCycle, contract.billingInterval)}
+                </span>
+              </>
+            }
           />
           <MetricInline
             label="Deposit"
-            value={contract.deposit ? formatRupiah(contract.deposit.toNumber()) : '—'}
+            value={<Money value={contract.deposit ? contract.deposit.toNumber() : null} />}
           />
           <MetricInline label="Tanggal masuk" value={formatDate(contract.startDate, 'id-ID')} />
           <MetricInline
@@ -133,12 +142,31 @@ export default async function ContractDetailPage({ params, searchParams }: Props
         <Card>
           <CardHeader>
             <CardTitle>Penghuni Tambahan</CardTitle>
+            <CardDescription>
+              Kamar ini dihuni {contract.occupants.length + 1} orang, termasuk penyewa utama.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+          <CardContent className="flex flex-col gap-4">
             {contract.occupants.map((occupant) => (
-              <Badge key={occupant.id} variant="outline">
-                {occupant.fullName}
-              </Badge>
+              <div key={occupant.id} className="border-b border-border pb-3 last:border-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Typography variant="large" as="span">
+                    {occupant.fullName}
+                  </Typography>
+                  {occupant.relation && <Badge variant="outline">{occupant.relation}</Badge>}
+                  {occupant.gender && <Badge variant="outline">{genderLabel(occupant.gender)}</Badge>}
+                </div>
+                <Typography variant="muted">
+                  {[
+                    occupant.phone,
+                    occupant.ktpNumber ? `KTP ${occupant.ktpNumber}` : '',
+                    occupant.occupation,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || 'Tidak ada data kontak.'}
+                </Typography>
+                {occupant.notes && <Typography variant="muted">{occupant.notes}</Typography>}
+              </div>
             ))}
           </CardContent>
         </Card>
@@ -207,11 +235,18 @@ export default async function ContractDetailPage({ params, searchParams }: Props
           <div className="mt-3">
             <MetricInline
               label="Potongan"
-              value={formatRupiah(contract.depositDeduction?.toNumber() ?? 0)}
+              value={
+                <Money
+                  value={contract.depositDeduction?.toNumber() ?? 0}
+                  tone={
+                    Number(contract.depositDeduction?.toNumber() ?? 0) > 0 ? 'destructive' : undefined
+                  }
+                />
+              }
             />
             <MetricInline
               label="Dikembalikan"
-              value={formatRupiah(contract.depositRefunded.toNumber())}
+              value={<Money value={contract.depositRefunded.toNumber()} />}
             />
             {contract.depositNote && <MetricInline label="Catatan" value={contract.depositNote} />}
           </div>

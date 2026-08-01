@@ -13,6 +13,7 @@ export * from './Icon';
 export * from './IconPicker';
 export * from './Input';
 export * from './Metric';
+export * from './Money';
 export * from './PageHeader';
 export * from './Radio';
 export * from './SegmentedControl';

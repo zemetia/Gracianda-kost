@@ -5,6 +5,7 @@ import { useActionState, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
+import { Money } from '@/components/ui/Money';
 import { electricityCharge } from '@/lib/electricity';
 import { formatRupiah } from '@/lib/utils';
 
@@ -50,7 +51,7 @@ export function ElectricityForm({ paymentId, tariffPerKwh, currentKwh }: Electri
 
         <p className="pb-1 text-sm text-foreground-muted">
           Tambahan tagihan{' '}
-          <span className="font-semibold tabular-nums text-foreground">{formatRupiah(preview)}</span>
+          <Money value={preview} />
         </p>
       </div>
 

@@ -1,4 +1,5 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import { Select } from '@/components/ui/Select';
 import {
   Table,
@@ -103,7 +104,9 @@ export default async function MaintenanceReportPage({ searchParams }: Props) {
                 <TableCell className="text-right tabular-nums text-foreground-muted">
                   {formatNumber(row.count)}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(row.totalCost)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={row.totalCost} />
+                </TableCell>
               </TableRow>
             ))}
             {report.byRoom.length === 0 && (
@@ -115,7 +118,9 @@ export default async function MaintenanceReportPage({ searchParams }: Props) {
               <TableRow>
                 <TableCell>Total</TableCell>
                 <TableCell className="text-right tabular-nums">{formatNumber(report.count)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalCost)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={report.totalCost} size="total" />
+                </TableCell>
               </TableRow>
             </TableFooter>
           )}
