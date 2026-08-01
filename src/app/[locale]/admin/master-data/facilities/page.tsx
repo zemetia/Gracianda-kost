@@ -1,9 +1,8 @@
-import { Button } from '@/components/ui/Button';
 import { Typography } from '@/components/ui/Typography';
 import { facilityService } from '@/services/facility.service';
 
+import { AddFacilityButton } from './AddFacilityButton';
 import { FacilityCard } from './FacilityCard';
-import { FacilityFormDialog } from './FacilityFormDialog';
 
 const GROUPS = [
   { category: 'COMMON', label: 'Fasilitas Umum' },
@@ -24,14 +23,7 @@ export default async function FacilitiesPage() {
             Master daftar fasilitas yang bisa dipasang ke kamar.
           </Typography>
         </div>
-        <FacilityFormDialog
-          mode="create"
-          renderTrigger={(open) => (
-            <Button type="button" onClick={open}>
-              Tambah Fasilitas
-            </Button>
-          )}
-        />
+        <AddFacilityButton />
       </div>
 
       {facilities.length === 0 ? (
