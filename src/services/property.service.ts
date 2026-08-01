@@ -67,3 +67,26 @@ export const propertyService = {
     });
   },
 };
+
+export const publicPropertyService = {
+  // Headline counts for the landing page. "Kosong" is derived from the absence
+  // of an ACTIVE contract — the same rule the public floor plan uses to paint a
+  // room AVAILABLE, so the two can never disagree.
+  async summary() {
+    const roomScope = { isActive: true, property: { isActive: true } } as const;
+
+    const [propertyCount, roomCount, occupiedRoomCount] = await Promise.all([
+      prisma.property.count({ where: { isActive: true } }),
+      prisma.room.count({ where: roomScope }),
+      prisma.room.count({
+        where: { ...roomScope, contracts: { some: { status: 'ACTIVE' } } },
+      }),
+    ]);
+
+    return {
+      propertyCount,
+      roomCount,
+      availableRoomCount: roomCount - occupiedRoomCount,
+    };
+  },
+};

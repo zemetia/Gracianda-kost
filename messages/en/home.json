@@ -18,8 +18,8 @@
     "heading": "Current Promo"
   },
   "rooms": {
-    "heading": "Interactive Floor Plan",
-    "subheading": "Select a floor and click a room number to view photo details, price, facilities, and availability status."
+    "heading": "Room Types",
+    "subheading": "Each type has its own price, size, and facilities. Open a type to see the individual room numbers and which ones are still vacant."
   },
   "gallery": {
     "heading": "Residential Gallery",

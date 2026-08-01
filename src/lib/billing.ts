@@ -125,6 +125,35 @@ export const PRICE_TIER_FIELDS = [
 
 export type PriceTierField = (typeof PRICE_TIER_FIELDS)[number]['field'];
 
+/**
+ * How a `(billingCycle, interval)` pair is written out for a tenant: `label`
+ * names the package, `per` is the unit a price is quoted against
+ * (`Rp 1.500.000 / bulan`). PRICE_TIER_FIELDS covers only the tiers the admin
+ * form offers — this covers any pair that can come back from the database.
+ */
+export function cycleWording(cycle: string, interval = 1): { label: string; per: string } {
+  const many = interval > 1;
+  switch (cycle) {
+    case 'DAILY':
+      return { label: many ? `${interval} Harian` : 'Harian', per: many ? `${interval} hari` : 'hari' };
+    case 'WEEKLY':
+      return {
+        label: many ? `${interval} Mingguan` : 'Mingguan',
+        per: many ? `${interval} minggu` : 'minggu',
+      };
+    case 'YEARLY':
+      return {
+        label: many ? `${interval} Tahunan` : 'Tahunan',
+        per: many ? `${interval} tahun` : 'tahun',
+      };
+    default:
+      return {
+        label: many ? `${interval} Bulanan` : 'Bulanan',
+        per: many ? `${interval} bulan` : 'bulan',
+      };
+  }
+}
+
 /** Calendar month `[first, firstOfNextMonth)` — the range an invoice run covers. */
 export function monthRange(periodMonth: number, periodYear: number): BillingPeriod {
   return {

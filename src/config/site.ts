@@ -105,5 +105,13 @@ export const siteConfig: SiteConfig = {
       changeFreq: 'weekly',
       priority: 1.0,
     },
+    search: {
+      path: '/cari-kamar',
+      title: 'Cari Kamar Kost — Gracianda House',
+      description:
+        'Cari kamar kost Gracianda House berdasarkan kategori hunian, tipe kamar, fasilitas, dan status ketersediaan — lihat berapa kamar yang masih kosong di tiap tipe.',
+      changeFreq: 'daily',
+      priority: 0.9,
+    },
   },
 };

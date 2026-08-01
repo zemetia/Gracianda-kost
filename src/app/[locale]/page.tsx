@@ -26,14 +26,15 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { buildMetadata } from '@/lib/seo';
 import { buildWaLink } from '@/lib/whatsapp';
+import { formatNumber } from '@/lib/utils';
 import { serializeSchema, organizationSchema, webPageSchema, faqSchema } from '@/lib/structured-data';
 import { siteConfig } from '@/config/site';
-import { publicRoomService } from '@/services/room.service';
+import { catalogService } from '@/services/catalog.service';
 import { publicPromoService } from '@/services/promo.service';
-import { propertyService } from '@/services/property.service';
+import { propertyService, publicPropertyService } from '@/services/property.service';
 import { Link } from '@/i18n/navigation';
 
-import { RoomFloorPlan } from './RoomFloorPlan';
+import { RoomTypeCard } from './RoomTypeCard';
 
 const GENERAL_FACILITIES = [
   {
@@ -187,10 +188,20 @@ export default async function HomePage({ params, searchParams }: Props) {
     selectedPropertyId = activeProperties[0]?.id;
   }
 
-  const [floors, promos] = await Promise.all([
-    selectedPropertyId ? publicRoomService.listFloorsWithRooms(selectedPropertyId) : Promise.resolve([]),
+  const [groups, promos, summary] = await Promise.all([
+    selectedPropertyId
+      ? catalogService.listGroups({ propertyId: selectedPropertyId })
+      : Promise.resolve([]),
     publicPromoService.listActive(),
+    publicPropertyService.summary(),
   ]);
+
+  // The landing page sells types, not units: how many kinds of room exist, how
+  // many of each are still free, and how many units nobody has typed yet.
+  const typedGroups = groups.filter((group) => group.roomTypeId !== null);
+  const untypedGroup = groups.find((group) => group.roomTypeId === null) ?? null;
+  const totalRooms = groups.reduce((sum, group) => sum + group.totalRooms, 0);
+  const availableRooms = groups.reduce((sum, group) => sum + group.availableRooms, 0);
 
   const contactWaLink = buildWaLink(
     siteConfig.company.whatsappNumber,
@@ -378,13 +389,13 @@ export default async function HomePage({ params, searchParams }: Props) {
         <section className="container-page py-14">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
             {[
-              { value: '50+', label: 'Kamar Tersedia' },
-              { value: '120+', label: 'Penghuni Puas' },
-              { value: '4.9/5', label: 'Rating Ulasan' },
+              { value: formatNumber(summary.propertyCount), label: 'Properti Hunian' },
+              { value: formatNumber(summary.roomCount), label: 'Total Kamar' },
+              { value: formatNumber(summary.availableRoomCount), label: 'Kamar Kosong' },
               { value: '24/7', label: 'Keamanan Aktif' },
             ].map((stat, idx) => (
               <div key={idx} className="flex flex-col items-center text-center gap-1">
-                <span className="font-extrabold text-3xl md:text-4xl tracking-[-0.04em] text-foreground leading-none">
+                <span className="font-extrabold text-3xl md:text-4xl tracking-[-0.04em] text-foreground leading-none tabular-nums">
                   {stat.value}
                 </span>
                 <span className="text-sm font-semibold text-foreground-muted leading-tight max-w-[100px]">
@@ -498,11 +509,11 @@ export default async function HomePage({ params, searchParams }: Props) {
         )}
 
         {/* ═══════════════════════════════════════════════════
-            ROOMS — Interactive floor plan
+            ROOMS — Room types, never individual units
         ═══════════════════════════════════════════════════ */}
         <section id="kamar" className="container-page py-16 border-t border-border/30">
           <div className="mb-10 text-center">
-            <p className="mb-2 font-bold text-primary text-sm md:text-base uppercase tracking-widest">Denah Kamar</p>
+            <p className="mb-2 font-bold text-primary text-sm md:text-base uppercase tracking-widest">Tipe Kamar</p>
             <h2 className="mb-3 text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               {t('rooms.heading')}
             </h2>
@@ -531,12 +542,48 @@ export default async function HomePage({ params, searchParams }: Props) {
             </div>
           )}
 
-          {selectedPropertyId ? (
-            <RoomFloorPlan floors={floors} />
-          ) : (
-            <p className="text-center py-8 text-foreground-muted">
-              Belum ada properti aktif yang tersedia saat ini.
+          {!selectedPropertyId || groups.length === 0 ? (
+            <p className="py-8 text-center text-foreground-muted">
+              Data kamar belum tersedia. Hubungi admin lewat WhatsApp untuk info ketersediaan terbaru.
             </p>
+          ) : (
+            <>
+              {/* Vacancy at a glance — the three numbers someone shopping asks for. */}
+              <div className="mb-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 rounded-[1.5rem] border border-border/40 bg-surface px-6 py-5 text-sm">
+                <p className="text-foreground-muted">
+                  <span className="font-bold text-foreground tabular-nums">{typedGroups.length}</span> tipe
+                  kamar
+                </p>
+                <p className="text-foreground-muted">
+                  <span className="font-bold text-success tabular-nums">{availableRooms}</span> dari{' '}
+                  <span className="font-bold text-foreground tabular-nums">{totalRooms}</span> kamar masih
+                  kosong
+                </p>
+                {untypedGroup && (
+                  <p className="text-foreground-muted">
+                    <span className="font-bold text-foreground tabular-nums">
+                      {untypedGroup.totalRooms}
+                    </span>{' '}
+                    kamar tanpa tipe
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {groups.map((group) => (
+                  <RoomTypeCard key={group.id} group={group} />
+                ))}
+              </div>
+
+              <div className="mt-10 flex justify-center">
+                <Link
+                  href="/cari-kamar"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground shadow-primary-glow transition-all hover:bg-primary-hover"
+                >
+                  Cari kamar per fasilitas & ketersediaan →
+                </Link>
+              </div>
+            </>
           )}
         </section>
 
