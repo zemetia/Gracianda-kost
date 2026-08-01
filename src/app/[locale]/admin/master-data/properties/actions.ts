@@ -18,8 +18,26 @@ function parsePropertyForm(formData: FormData) {
     name: formData.get('name'),
     code: formData.get('code'),
     type: formData.get('type'),
-    address: formData.get('address') || undefined,
-    description: formData.get('description') || undefined,
+    description: formData.get('description'),
+
+    address: formData.get('address'),
+    district: formData.get('district'),
+    city: formData.get('city'),
+    province: formData.get('province'),
+    postalCode: formData.get('postalCode'),
+    latitude: formData.get('latitude') || null,
+    longitude: formData.get('longitude') || null,
+    mapsUrl: formData.get('mapsUrl'),
+
+    contactName: formData.get('contactName'),
+    contactPhone: formData.get('contactPhone'),
+    whatsappNumber: formData.get('whatsappNumber'),
+    contactEmail: formData.get('contactEmail'),
+
+    genderPolicy: formData.get('genderPolicy') ?? undefined,
+    curfewTime: formData.get('curfewTime'),
+    rules: formData.get('rules'),
+
     isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
     facilityIds: formData.getAll('facilityIds'),
   });
@@ -77,9 +95,15 @@ export async function updatePropertyAction(
   return {};
 }
 
-export async function deactivatePropertyAction(id: string): Promise<void> {
+export async function deactivatePropertyAction(id: string): Promise<{ error?: string }> {
   const session = await requireRole(CAN_MANAGE);
-  await propertyService.deactivate(id);
+
+  try {
+    await propertyService.deactivate(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menonaktifkan properti' };
+  }
+
   await auditService.log({
     userId: session.user.id,
     action: 'UPDATE',
@@ -88,4 +112,5 @@ export async function deactivatePropertyAction(id: string): Promise<void> {
     after: { isActive: false },
   });
   revalidatePath('/admin/master-data/properties');
+  return {};
 }

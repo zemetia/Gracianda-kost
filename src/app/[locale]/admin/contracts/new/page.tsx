@@ -34,6 +34,7 @@ export default async function NewContractPage({ searchParams }: Props) {
           fullName: t.fullName,
           ktpNumber: t.ktpNumber,
           phone: t.phone,
+          gender: t.gender,
           isBlacklisted: t.isBlacklisted,
           blacklistNote: t.blacklistNote,
         }))}
@@ -42,7 +43,7 @@ export default async function NewContractPage({ searchParams }: Props) {
           number: r.number,
           price: r.price.toNumber(),
           floor: r.floor ? { name: r.floor.name } : null,
-          property: { name: r.property.name },
+          property: { name: r.property.name, genderPolicy: r.property.genderPolicy },
           prices: r.prices.map((p) => ({
             id: p.id,
             billingCycle: p.billingCycle,

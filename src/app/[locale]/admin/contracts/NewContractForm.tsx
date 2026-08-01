@@ -11,19 +11,32 @@ import { DatePicker, toISODate } from '@/components/ui/DatePicker';
 import { FormCard, FormError, FormGrid, FormLayout, FormStickyBar } from '@/components/ui/Form';
 import { Input } from '@/components/ui/Input';
 import { MetricInline } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { cn } from '@/lib/cn';
+import {
+  GENDER_OPTIONS,
+  GENDER_POLICY_LABEL,
+  MARITAL_STATUS_OPTIONS,
+  genderLabel,
+  genderRequiredBy,
+  occupantCountLabel,
+} from '@/lib/tenant';
 import { formatDate, formatRupiah } from '@/lib/utils';
 
 import { createContractAction, type ContractFormState } from './actions';
+import { OccupantsField, type OccupantDraft } from './OccupantsField';
+
+type Gender = 'LAKI_LAKI' | 'PEREMPUAN' | '';
 
 interface Tenant {
   id: string;
   fullName: string;
   ktpNumber: string;
   phone: string;
+  gender: 'LAKI_LAKI' | 'PEREMPUAN' | null;
   isBlacklisted: boolean;
   blacklistNote: string | null;
 }
@@ -33,7 +46,7 @@ interface Room {
   number: string;
   price: number;
   floor: { name: string } | null;
-  property: { name: string };
+  property: { name: string; genderPolicy: 'PUTRA' | 'PUTRI' | 'CAMPUR' };
   prices: { id: string; billingCycle: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'; interval: number; price: number }[];
 }
 
@@ -113,10 +126,14 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
   const [blacklistAcknowledged, setBlacklistAcknowledged] = useState(false);
 
   // Controlled so a KTP number can be checked against existing tenants while
-  // typing, and so the confirmation step can show what was entered.
+  // typing, so the gender can be checked against the property's putra/putri
+  // rule, and so the confirmation step can show what was entered.
   const [newFullName, setNewFullName] = useState('');
   const [newKtpNumber, setNewKtpNumber] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newGender, setNewGender] = useState<Gender>('');
+  const [newBirthDate, setNewBirthDate] = useState('');
+  const [newMaritalStatus, setNewMaritalStatus] = useState('');
 
   // Arriving from the room detail page's "Buat Kontrak" quick action — the
   // room is already decided, so seed it as initial state instead of
@@ -145,11 +162,25 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
     preselectedRoom ? preselectedRoom.prices?.[0]?.price ?? preselectedRoom.price : '',
   );
   const [deposit, setDeposit] = useState<number | ''>('');
-  const [occupantNames, setOccupantNames] = useState('');
+  const [occupants, setOccupants] = useState<OccupantDraft[]>([]);
   const [notes, setNotes] = useState('');
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId);
   const selectedTenant = tenants.find((tenant) => tenant.id === selectedTenantId);
+
+  const activeGender = tenantMode === 'existing' ? selectedTenant?.gender ?? '' : newGender;
+  // Aturan gender properti (putra/putri) hanya diperingatkan, tidak diblokir —
+  // pemilik kost yang memutuskan pengecualian, bukan form.
+  const requiredGender = selectedRoom ? genderRequiredBy(selectedRoom.property.genderPolicy) : null;
+  // Includes the extra occupants: a putri kost cares about everyone sleeping
+  // in the room, not only whoever signed the contract.
+  const genderMismatch =
+    requiredGender &&
+    [activeGender, ...occupants.map((occupant) => occupant.gender)]
+      .filter(Boolean)
+      .some((gender) => gender !== requiredGender);
+
+  const filledOccupants = occupants.filter((occupant) => occupant.fullName.trim());
 
   // Blacklist is a warning with a confirmation, never a hard block: "masalahnya
   // sudah selesai" is a real case, but it must be a deliberate choice.
@@ -420,6 +451,38 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
                     onChange={(e) => setNewKtpNumber(e.target.value)}
                     error={state.fieldErrors?.ktpNumber?.[0]}
                   />
+                  <Select
+                    label="Jenis Kelamin"
+                    name="gender"
+                    placeholder="Pilih jenis kelamin"
+                    allowEmpty
+                    options={GENDER_OPTIONS}
+                    value={newGender}
+                    onValueChange={(next) => setNewGender(next as Gender)}
+                    error={state.fieldErrors?.gender?.[0]}
+                  />
+                  <Select
+                    label="Status Pernikahan"
+                    name="maritalStatus"
+                    placeholder="Pilih status"
+                    allowEmpty
+                    options={MARITAL_STATUS_OPTIONS}
+                    value={newMaritalStatus}
+                    onValueChange={setNewMaritalStatus}
+                  />
+                  <Input
+                    label="Tempat Lahir"
+                    name="birthPlace"
+                    error={state.fieldErrors?.birthPlace?.[0]}
+                  />
+                  <DatePicker
+                    label="Tanggal Lahir"
+                    name="birthDate"
+                    value={newBirthDate}
+                    onValueChange={setNewBirthDate}
+                    max={todayStr()}
+                    error={state.fieldErrors?.birthDate?.[0]}
+                  />
                   <Input
                     label="Nomor HP"
                     name="phone"
@@ -430,8 +493,20 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
                   />
                   <Input label="Email" name="email" type="email" error={state.fieldErrors?.email?.[0]} />
                   <Input label="Pekerjaan" name="occupation" error={state.fieldErrors?.occupation?.[0]} />
+                  <Input
+                    label="Kantor / Kampus"
+                    name="institution"
+                    placeholder="PT Maju Jaya / Universitas Brawijaya"
+                  />
                   <Input label="Jenis Kendaraan" name="vehicleType" placeholder="Motor Honda Beat" />
                   <Input label="Plat Nomor" name="vehiclePlate" />
+                  <Textarea
+                    label="Alamat Asal (sesuai KTP)"
+                    name="idAddress"
+                    rows={2}
+                    className="sm:col-span-2"
+                    error={state.fieldErrors?.idAddress?.[0]}
+                  />
                 </FormGrid>
 
                 {duplicateTenant && (
@@ -458,6 +533,24 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
               </>
             )}
           </FormCard>
+
+          {tenantMode === 'new' && (
+            <FormCard
+              title="Kontak Darurat"
+              description="Nomor yang dihubungi kalau penyewa sakit, hilang kontak, atau menunggak."
+              className="mt-6"
+            >
+              <FormGrid>
+                <Input label="Nama Kontak Darurat" name="emergencyName" />
+                <Input
+                  label="Hubungan"
+                  name="emergencyRelation"
+                  placeholder="Orang tua / Saudara / Suami"
+                />
+                <Input label="Nomor HP Kontak Darurat" name="emergencyPhone" />
+              </FormGrid>
+            </FormCard>
+          )}
         </div>
 
         {/* Step 2 — Kamar & Harga */}
@@ -559,14 +652,27 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
             </FormGrid>
           </FormCard>
 
-          <FormCard title="Tambahan" description="Opsional — hanya terlihat oleh admin.">
-            <Input
-              name="occupantNames"
-              label="Penghuni Tambahan"
-              placeholder="Pisahkan dengan koma, mis: Budi, Ani"
-              value={occupantNames}
-              onChange={(e) => setOccupantNames(e.target.value)}
-            />
+          <FormCard
+            title="Penghuni Tambahan"
+            description="Selain penyewa utama. Satu kamar boleh diisi 2, 3, atau lebih orang — tambahkan barisnya sebanyak yang tinggal di sana."
+          >
+            <OccupantsField occupants={occupants} onChange={setOccupants} />
+
+            {genderMismatch && selectedRoom && (
+              <div className="rounded-md border border-warning/40 border-l-4 border-l-warning bg-warning-subtle p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  {selectedRoom.property.name} berstatus{' '}
+                  {GENDER_POLICY_LABEL[selectedRoom.property.genderPolicy]}.
+                </p>
+                <p className="mt-1 text-xs text-foreground-muted">
+                  Ada penghuni yang jenis kelaminnya tidak sesuai aturan properti. Kontrak tetap bisa
+                  dibuat — pastikan ini memang dikecualikan pemilik.
+                </p>
+              </div>
+            )}
+          </FormCard>
+
+          <FormCard title="Catatan" description="Opsional — hanya terlihat oleh admin.">
             <Textarea
               name="notes"
               label="Catatan"
@@ -587,12 +693,20 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
                   <MetricInline label="Nama" value={selectedTenant.fullName} />
                   <MetricInline label="KTP" value={selectedTenant.ktpNumber} />
                   <MetricInline label="Nomor HP" value={selectedTenant.phone} />
+                  <MetricInline
+                    label="Jenis kelamin"
+                    value={genderLabel(selectedTenant.gender)}
+                  />
                 </>
               ) : (
                 <>
                   <MetricInline label="Nama" value={`${newFullName || '—'} (penyewa baru)`} />
                   <MetricInline label="KTP" value={newKtpNumber || '—'} />
                   <MetricInline label="Nomor HP" value={newPhone || '—'} />
+                  <MetricInline
+                    label="Jenis kelamin"
+                    value={genderLabel(newGender)}
+                  />
                 </>
               )}
             </div>
@@ -613,11 +727,17 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
               />
               <MetricInline
                 label="Tarif"
-                value={`${formatRupiah(Number(rentPrice) || 0)} / ${
-                  activeInterval === 1
-                    ? CYCLE_UNIT[activeCycle].toLowerCase()
-                    : `${activeInterval} ${CYCLE_UNIT[activeCycle].toLowerCase()}`
-                }`}
+                value={
+                  <>
+                    <Money value={Number(rentPrice) || 0} />
+                    <span className="ml-1 text-xs font-normal text-foreground-muted">
+                      /{' '}
+                      {activeInterval === 1
+                        ? CYCLE_UNIT[activeCycle].toLowerCase()
+                        : `${activeInterval} ${CYCLE_UNIT[activeCycle].toLowerCase()}`}
+                    </span>
+                  </>
+                }
               />
               <MetricInline
                 label="Masa sewa"
@@ -625,14 +745,40 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
               />
               <MetricInline
                 label="Deposit"
-                value={deposit !== '' && Number(deposit) > 0 ? formatRupiah(Number(deposit)) : '—'}
+                value={<Money value={deposit !== '' && Number(deposit) > 0 ? Number(deposit) : null} />}
               />
-              {occupantNames.trim() && (
-                <MetricInline label="Penghuni tambahan" value={occupantNames} />
-              )}
+              <MetricInline
+                label="Jumlah penghuni"
+                value={occupantCountLabel(filledOccupants.length)}
+              />
               {notes.trim() && <MetricInline label="Catatan" value={notes} />}
             </div>
           </section>
+
+          {filledOccupants.length > 0 && (
+            <section>
+              <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                Penghuni Tambahan
+              </h3>
+              <div className="mt-3 max-w-xl">
+                {filledOccupants.map((occupant) => (
+                  <MetricInline
+                    key={occupant.key}
+                    label={occupant.fullName}
+                    value={
+                      [
+                        occupant.relation,
+                        occupant.gender ? genderLabel(occupant.gender) : '',
+                        occupant.phone,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || '—'
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         <FormError message={state.error} />

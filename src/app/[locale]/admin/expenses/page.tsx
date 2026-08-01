@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { Money } from '@/components/ui/Money';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import {
@@ -19,7 +20,7 @@ import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
 import { EXPENSE_CATEGORIES, expenseCategoryLabel, type ExpenseCategory } from '@/lib/expense';
 import { getPropertyScope } from '@/lib/property-scope';
-import { formatDate, formatRupiah } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { expenseService } from '@/services/expense.service';
 import { propertyService } from '@/services/property.service';
 
@@ -142,7 +143,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
                   </TableCell>
                   <TableCell className="text-foreground">{expense.payee || '—'}</TableCell>
                   <TableCell className="max-w-xs truncate text-foreground-muted">{expense.note || '—'}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatRupiah(expense.amount.toNumber())}</TableCell>
+                  <TableCell className="text-right">
+                    <Money value={expense.amount.toNumber()} />
+                  </TableCell>
                   <TableCell>
                     {canManage && (
                       <ExpenseRowActions
@@ -162,7 +165,9 @@ export default async function ExpensesPage({ searchParams }: Props) {
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={4}>Total</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatRupiah(total)}</TableCell>
+                  <TableCell className="text-right">
+                    <Money value={total} size="total" />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               </TableFooter>

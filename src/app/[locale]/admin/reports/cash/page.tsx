@@ -1,4 +1,5 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import {
   Table,
   TableBody,
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
-import { formatNumber, formatRupiah } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 
@@ -77,7 +78,9 @@ export default async function CashReportPage({ searchParams }: Props) {
                   {row.type ? TYPE_LABEL[row.type] : '—'}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{formatNumber(row.count)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(row.total)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={row.total} />
+                </TableCell>
               </TableRow>
             ))}
             {report.byMethod.length === 0 && (
@@ -88,7 +91,9 @@ export default async function CashReportPage({ searchParams }: Props) {
             <TableFooter>
               <TableRow>
                 <TableCell colSpan={3}>Total</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalReceived)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={report.totalReceived} size="total" tone="primary" />
+                </TableCell>
               </TableRow>
             </TableFooter>
           )}

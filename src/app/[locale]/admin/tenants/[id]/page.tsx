@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { MetricInline } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import { genderLabel, maritalStatusLabel, occupantCountLabel } from '@/lib/tenant';
 import { formatDate } from '@/lib/utils';
 import { tenantService } from '@/services/tenant.service';
 import { attachmentService } from '@/services/attachment.service';
@@ -51,7 +52,18 @@ export default async function TenantDetailPage({ params }: Props) {
           Data Penyewa
         </h3>
         <div className="mt-3">
+          <MetricInline label="Jenis kelamin" value={genderLabel(tenant.gender)} />
+          <MetricInline
+            label="Tempat, tanggal lahir"
+            value={
+              [tenant.birthPlace, tenant.birthDate ? formatDate(tenant.birthDate, 'id-ID') : '']
+                .filter(Boolean)
+                .join(', ') || '—'
+            }
+          />
+          <MetricInline label="Status pernikahan" value={maritalStatusLabel(tenant.maritalStatus)} />
           <MetricInline label="Pekerjaan" value={tenant.occupation ?? '—'} />
+          <MetricInline label="Kantor / kampus" value={tenant.institution ?? '—'} />
           <MetricInline
             label="Kendaraan"
             value={
@@ -60,6 +72,24 @@ export default async function TenantDetailPage({ params }: Props) {
                 : '—'
             }
           />
+          <MetricInline label="Alamat asal (KTP)" value={tenant.idAddress ?? '—'} />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+          Kontak Darurat
+        </h3>
+        <div className="mt-3">
+          <MetricInline
+            label="Nama"
+            value={
+              tenant.emergencyName
+                ? `${tenant.emergencyName}${tenant.emergencyRelation ? ` (${tenant.emergencyRelation})` : ''}`
+                : '—'
+            }
+          />
+          <MetricInline label="Nomor HP" value={tenant.emergencyPhone ?? '—'} />
         </div>
       </section>
 
@@ -103,6 +133,7 @@ export default async function TenantDetailPage({ params }: Props) {
                 <Typography variant="muted">
                   Kamar {contract.room.number} · {formatDate(contract.startDate, 'id-ID')}
                   {contract.actualEndDate ? ` – ${formatDate(contract.actualEndDate, 'id-ID')}` : ''}
+                  {` · ${occupantCountLabel(contract.occupants.length)}`}
                 </Typography>
               </div>
               <Badge variant={contract.status === 'ACTIVE' ? 'success' : 'outline'}>

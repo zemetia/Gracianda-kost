@@ -3,6 +3,8 @@
 @theme {
   /* ─── Typography ─────────────────────────────────────────────── */
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  /* Admin runs on Inter, not Outfit — see the `[data-admin-shell]` rule below. */
+  --font-admin: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "Cascadia Code", monospace;
 
   /* ─── Brand / Semantic Colors (oklch for wide-gamut) ─────────── */
@@ -132,6 +134,19 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Admin typeface scope. The rule targets `body` rather than the admin wrapper
+     itself so portalled UI — dialogs, listboxes, the command palette, toasts —
+     inherits it too; those render as direct children of `body`, outside the
+     admin subtree. `:has()` keeps this pure CSS: no client component, no
+     hydration flash. */
+  body:has([data-admin-shell]) {
+    font-family: var(--font-admin);
+    /* Single-storey `a`/`g` alternates — steadier at the 12–13px admin runs at.
+       Ignored by any build of Inter that doesn't ship them, so it is safe. */
+    font-feature-settings: "cv05", "cv11";
+    letter-spacing: -0.006em;
   }
 
   /* Browser spinners on numeric fields are noise in a data-entry app — money

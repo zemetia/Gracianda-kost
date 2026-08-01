@@ -1,18 +1,71 @@
 import { z } from 'zod';
 
+// Optional free text that an empty input must be able to CLEAR — `''` and
+// `undefined` both become null so an update writes null instead of silently
+// keeping the previous value.
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .nullable()
+    .transform((value) => value || null);
+
+// Same idea for enums and dates: an empty `<select>` / date field means
+// "kosongkan", not "biarkan".
+const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z
+    .enum(values)
+    .optional()
+    .nullable()
+    .or(z.literal(''))
+    .transform((value) => (value ? (value as T[number]) : null));
+
+const optionalDate = z
+  .union([z.coerce.date(), z.literal('')])
+  .optional()
+  .nullable()
+  .transform((value) => (value instanceof Date ? value : null));
+
+export const GENDERS = ['LAKI_LAKI', 'PEREMPUAN'] as const;
+export const MARITAL_STATUSES = ['BELUM_MENIKAH', 'MENIKAH', 'CERAI'] as const;
+
 export const tenantSchema = z.object({
   fullName: z.string().min(1, 'Nama wajib diisi').max(150),
-  email: z.string().email('Email tidak valid').optional().or(z.literal('')),
+  email: optionalText(150).refine((value) => !value || z.string().email().safeParse(value).success, {
+    message: 'Email tidak valid',
+  }),
   phone: z.string().min(8, 'Nomor HP wajib diisi').max(20),
   ktpNumber: z.string().min(1, 'Nomor KTP wajib diisi').max(30),
-  occupation: z.string().max(100).optional(),
-  vehicleType: z.string().max(100).optional(),
-  vehiclePlate: z.string().max(20).optional(),
+
+  gender: optionalEnum(GENDERS),
+  birthPlace: optionalText(100),
+  birthDate: optionalDate,
+  maritalStatus: optionalEnum(MARITAL_STATUSES),
+  idAddress: optionalText(500),
+
+  occupation: optionalText(100),
+  institution: optionalText(150),
+  vehicleType: optionalText(100),
+  vehiclePlate: optionalText(20),
+
+  emergencyName: optionalText(150),
+  emergencyRelation: optionalText(50),
+  emergencyPhone: optionalText(20),
 });
 
+// One extra person living in the room. Only the name is required — an occupant
+// whose details the admin does not have yet is still better recorded than not
+// recorded at all.
 export const occupantSchema = z.object({
-  fullName: z.string().min(1).max(150),
-  relation: z.string().max(50).optional(),
+  fullName: z.string().trim().min(1).max(150),
+  relation: optionalText(50),
+  gender: optionalEnum(GENDERS),
+  phone: optionalText(20),
+  ktpNumber: optionalText(30),
+  occupation: optionalText(100),
+  notes: optionalText(300),
 });
 
 export const newContractSchema = z.object({

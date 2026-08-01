@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
-import { formatDate, formatNumber, formatRupiah } from '@/lib/utils';
+import { formatDate, formatNumber } from '@/lib/utils';
 import { facilityService } from '@/services/facility.service';
 import { roomService } from '@/services/room.service';
 import { attachmentService } from '@/services/attachment.service';
@@ -239,9 +240,7 @@ export default async function EditRoomPage({ params }: Props) {
                   <span className="text-foreground">
                     {record.category} — {formatDate(record.date, 'id-ID')}
                   </span>
-                  <span className="tabular-nums text-foreground-muted">
-                    {record.cost ? formatRupiah(record.cost.toNumber()) : '—'}
-                  </span>
+                  <Money value={record.cost ? record.cost.toNumber() : null} />
                 </div>
               ))}
               {history.maintenance.length === 0 && (

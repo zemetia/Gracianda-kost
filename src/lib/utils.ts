@@ -43,6 +43,23 @@ export function formatRoomSize(lengthM: number | null, widthM: number | null): s
   return `${dim(lengthM)} m x ${dim(widthM)} m`;
 }
 
+/**
+ * One postal address line out of the separate location columns:
+ * `Jl. Melati 12, Lowokwaru, Kota Malang, Jawa Timur 65141`.
+ * Null when nothing was filled in — callers render their own dash.
+ */
+export function formatPropertyAddress(property: {
+  address?: string | null;
+  district?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+}): string | null {
+  const region = [property.province, property.postalCode].filter(Boolean).join(' ');
+  const parts = [property.address, property.district, property.city, region].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
 export function truncate(str: string, maxLength: number, suffix = '…'): string {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength - suffix.length).trimEnd() + suffix;

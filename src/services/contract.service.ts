@@ -4,10 +4,11 @@
 
 import { firstPeriod } from '@/lib/billing';
 import { prisma } from '@/lib/prisma';
-import type { Prisma } from '@/generated/prisma/client';
+import type { ContractOccupant, Prisma } from '@/generated/prisma/client';
 import type {
   CheckoutContractInput,
   NewContractInput,
+  OccupantInput,
   RenewContractInput,
   TransferRoomInput,
 } from '@/lib/validations';
@@ -48,8 +49,25 @@ interface InsertContractData {
   startDate: Date;
   endDate?: Date | undefined;
   notes?: string | undefined;
-  occupants: { fullName: string; relation?: string | undefined }[];
+  occupants: OccupantInput[];
   previousContractId?: string | undefined;
+}
+
+/**
+ * Occupants follow their contract, not the room: renewing or moving rooms
+ * creates a new contract, and the people living there are the same people —
+ * so every detail is copied, not just the name.
+ */
+function carryOccupants(occupants: ContractOccupant[]): OccupantInput[] {
+  return occupants.map((occupant) => ({
+    fullName: occupant.fullName,
+    relation: occupant.relation,
+    gender: occupant.gender,
+    phone: occupant.phone,
+    ktpNumber: occupant.ktpNumber,
+    occupation: occupant.occupation,
+    notes: occupant.notes,
+  }));
 }
 
 /**
@@ -234,10 +252,7 @@ export const contractService = {
         startDate: input.startDate,
         endDate: input.endDate,
         notes: input.notes,
-        occupants: current.occupants.map((occupant) => ({
-          fullName: occupant.fullName,
-          relation: occupant.relation ?? undefined,
-        })),
+        occupants: carryOccupants(current.occupants),
         previousContractId: id,
       });
     });
@@ -268,10 +283,7 @@ export const contractService = {
         startDate: input.startDate,
         endDate: input.endDate,
         notes: input.notes,
-        occupants: current.occupants.map((occupant) => ({
-          fullName: occupant.fullName,
-          relation: occupant.relation ?? undefined,
-        })),
+        occupants: carryOccupants(current.occupants),
         previousContractId: id,
       });
     });

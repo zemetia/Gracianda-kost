@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { MetricBlock, MetricInline, MetricRow } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
@@ -82,12 +83,12 @@ export default async function PaymentDetailPage({ params }: Props) {
       <div className="max-w-xl">
         {electricityAmount > 0 && (
           <>
-            <MetricInline label="Sewa" value={formatRupiah(payment.rentAmount.toNumber())} />
+            <MetricInline label="Sewa" value={<Money value={payment.rentAmount.toNumber()} />} />
             <MetricInline
               label={`Listrik (${formatNumber(electricityKwh ?? 0)} kWh × ${formatRupiah(
                 payment.electricityRate?.toNumber() ?? tariffPerKwh,
               )})`}
-              value={formatRupiah(electricityAmount)}
+              value={<Money value={electricityAmount} />}
             />
           </>
         )}

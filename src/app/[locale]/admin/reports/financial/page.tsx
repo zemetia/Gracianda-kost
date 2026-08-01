@@ -1,4 +1,5 @@
 import { MetricBlock, MetricRow } from '@/components/ui/Metric';
+import { Money } from '@/components/ui/Money';
 import {
   Table,
   TableBody,
@@ -116,11 +117,18 @@ export default async function FinancialReportPage({ searchParams }: Props) {
             {report.byRoom.map((row) => (
               <TableRow key={row.roomNumber}>
                 <TableCell className="font-medium text-foreground">{row.roomNumber}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(row.revenue)}</TableCell>
-                <TableCell className="text-right tabular-nums text-foreground-muted">
-                  {formatRupiah(row.cost)}
+                <TableCell className="text-right">
+                  <Money value={row.revenue} />
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(row.revenue - row.cost)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={row.cost} tone="muted" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Money
+                    value={row.revenue - row.cost}
+                    tone={row.revenue - row.cost < 0 ? 'destructive' : undefined}
+                  />
+                </TableCell>
               </TableRow>
             ))}
             {report.byRoom.length === 0 && (
@@ -131,9 +139,19 @@ export default async function FinancialReportPage({ searchParams }: Props) {
             <TableFooter>
               <TableRow>
                 <TableCell>Total</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalRevenue)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(report.totalCost)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(report.profit)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={report.totalRevenue} size="total" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Money value={report.totalCost} size="total" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Money
+                    value={report.profit}
+                    size="total"
+                    tone={report.profit < 0 ? 'destructive' : 'primary'}
+                  />
+                </TableCell>
               </TableRow>
             </TableFooter>
           )}
@@ -165,7 +183,9 @@ export default async function FinancialReportPage({ searchParams }: Props) {
                     {row.label}
                   </Link>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(row.total)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={row.total} />
+                </TableCell>
               </TableRow>
             ))}
             {report.expenseByCategory.length === 0 && (
@@ -176,7 +196,9 @@ export default async function FinancialReportPage({ searchParams }: Props) {
             <TableFooter>
               <TableRow>
                 <TableCell>Total</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(report.expenseCost)}</TableCell>
+                <TableCell className="text-right">
+                  <Money value={report.expenseCost} size="total" />
+                </TableCell>
               </TableRow>
             </TableFooter>
           )}

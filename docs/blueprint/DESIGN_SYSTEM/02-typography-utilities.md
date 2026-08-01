@@ -32,14 +32,31 @@ Fonts loaded via `next/font/google` in `src/app/[locale]/layout.tsx`, injected a
 
 | CSS variable | Font family | Weights | Utility |
 |---|---|---|---|
-| `--font-outfit` | Outfit | 300–800 | `font-sans` — all body + UI text |
+| `--font-outfit` | Outfit | 300–800 | `font-sans` — public site body + UI text |
+| `--font-inter` | Inter | variable | `font-admin` — everything under `/admin` |
 | `--font-jetbrains-mono` | JetBrains Mono | 400–600 | `font-mono` — code, monospace data |
 
 `@theme` mapping:
 ```css
 --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+--font-admin: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 --font-mono: var(--font-jetbrains-mono), ui-monospace, "Cascadia Code", monospace;
 ```
+
+### Admin runs on Inter
+
+Outfit is a display face — good on the landing page, mushy in a dense table of numbers. Admin
+switches to Inter, and the switch is one rule in `globals.css`:
+
+```css
+body:has([data-admin-shell]) { font-family: var(--font-admin); … }
+```
+
+`data-admin-shell` sits on the root `<div>` of `src/app/[locale]/admin/layout.tsx`. The rule targets
+`body` rather than that div on purpose: dialogs, listboxes, the command palette, and toasts portal to
+`document.body`, outside the admin subtree, and would otherwise stay on Outfit. `:has()` keeps it
+pure CSS — no client component toggling a class, so no hydration flash. Nothing in admin should set
+`font-sans` explicitly; inheritance is what does the work.
 
 ### Typography component ([src/components/ui/Typography/](../../../src/components/ui/Typography/))
 

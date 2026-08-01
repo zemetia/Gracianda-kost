@@ -1,11 +1,50 @@
 import { z } from 'zod';
 
+// Optional free text that an empty input must be able to CLEAR — `''` and
+// `undefined` both become null so the update writes null instead of silently
+// keeping the previous value.
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .nullable()
+    .transform((value) => value || null);
+
 export const propertySchema = z.object({
   name: z.string().min(1, 'Nama properti wajib diisi').max(150),
   code: z.string().min(2, 'Kode properti minimal 2 karakter').max(10).toUpperCase(),
-  address: z.string().max(500).optional().nullable(),
-  description: z.string().max(2000).optional().nullable(),
+  description: optionalText(2000),
   type: z.enum(['KOST', 'HOUSE', 'APARTMENT', 'VILLA', 'OTHER']).default('KOST'),
+
+  // Lokasi
+  address: optionalText(500),
+  district: optionalText(100),
+  city: optionalText(100),
+  province: optionalText(100),
+  postalCode: optionalText(10),
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  mapsUrl: optionalText(500).refine((value) => !value || /^https?:\/\//.test(value), {
+    message: 'Link peta harus diawali http:// atau https://',
+  }),
+
+  // Kontak
+  contactName: optionalText(150),
+  contactPhone: optionalText(30),
+  whatsappNumber: optionalText(30),
+  contactEmail: optionalText(150).refine((value) => !value || z.email().safeParse(value).success, {
+    message: 'Format email tidak valid',
+  }),
+
+  // Aturan & operasional
+  genderPolicy: z.enum(['PUTRA', 'PUTRI', 'CAMPUR']).default('CAMPUR'),
+  curfewTime: optionalText(5).refine((value) => !value || /^\d{2}:\d{2}$/.test(value), {
+    message: 'Format jam malam harus HH:MM',
+  }),
+  rules: optionalText(2000),
+
   isActive: z.coerce.boolean().default(true),
   facilityIds: z.array(z.string()).default([]),
 });
