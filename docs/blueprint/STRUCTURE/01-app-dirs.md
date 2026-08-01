@@ -54,7 +54,9 @@
 | [src/app/layout.tsx](../../../src/app/layout.tsx) | file | Root layout — minimal HTML shell only |
 | [src/app/[locale]/layout.tsx](../../../src/app/%5Blocale%5D/layout.tsx) | file | Locale layout: fonts, providers, `<Toaster />`, PostHog |
 | [src/app/[locale]/page.tsx](../../../src/app/%5Blocale%5D/page.tsx) | file | Home page (Server Component) |
-| [src/app/[locale]/about/page.tsx](../../../src/app/%5Blocale%5D/about/page.tsx) | file | About page (Server Component) |
+| [src/app/[locale]/cari-kamar/page.tsx](../../../src/app/%5Blocale%5D/cari-kamar/page.tsx) | file | Public room search — filters live in the URL, parsed by `cari-kamar/query.ts` |
+| [src/app/[locale]/tipe-kamar/[id]/page.tsx](../../../src/app/%5Blocale%5D/tipe-kamar/%5Bid%5D/page.tsx) | file | Room type detail + its units. `id` is a RoomType id or `tanpa-tipe-<propertyId>` |
+| [src/app/[locale]/kamar/[id]/page.tsx](../../../src/app/%5Blocale%5D/kamar/%5Bid%5D/page.tsx) | file | Single room detail — authoritative prices, facilities, house rules |
 | [src/app/api/health/route.ts](../../../src/app/api/health/route.ts) | file | Health check endpoint — Edge runtime |
 | [src/app/api/auth/[...nextauth]/route.ts](../../../src/app/api/auth/%5B...nextauth%5D/route.ts) | file | NextAuth HTTP handler — do not edit, just re-exports `handlers` |
 | [src/app/sitemap.ts](../../../src/app/sitemap.ts) | file | Auto-generated `/sitemap.xml` — driven by `siteConfig.pages` |

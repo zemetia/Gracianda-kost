@@ -8,6 +8,11 @@ export function buildRoomInquiryMessage(roomNumber: string): string {
   return `Halo Admin Gracianda House, saya tertarik dengan kamar ${roomNumber}. Apakah masih tersedia?`;
 }
 
+/** Asked before a unit is picked — the prospect only knows which type they want. */
+export function buildRoomTypeInquiryMessage(typeName: string, propertyName: string): string {
+  return `Halo Admin ${propertyName}, saya tertarik dengan kamar tipe ${typeName}. Kamar mana saja yang masih kosong dan bisakah saya survei lokasi?`;
+}
+
 interface ReminderTenant {
   fullName: string;
 }

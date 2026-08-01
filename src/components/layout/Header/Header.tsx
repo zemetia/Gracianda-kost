@@ -39,18 +39,18 @@ export function Header({ className }: HeaderProps) {
         {/* Desktop nav links */}
         <nav aria-label="Main navigation" className="hidden lg:flex items-center gap-1">
           {[
-            { href: '#kamar', label: t('rooms') },
-            { href: '#fasilitas', label: t('facilities') },
-            { href: '#lokasi', label: t('location') },
-            { href: '#kontak', label: t('contact') },
+            { href: '/#kamar', label: t('rooms') },
+            { href: '/#fasilitas', label: t('facilities') },
+            { href: '/#lokasi', label: t('location') },
+            { href: '/#kontak', label: t('contact') },
           ].map(({ href, label }) => (
-            <a
+            <Link
               key={href}
               href={href}
               className="rounded-full px-4 py-2 text-sm font-semibold text-foreground-muted transition-all hover:bg-primary-subtle hover:text-primary"
             >
               {label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -64,12 +64,12 @@ export function Header({ className }: HeaderProps) {
             <LockKeyhole className="h-4 w-4" />
             Login Admin
           </Link>
-          <a
-            href="#kamar"
+          <Link
+            href="/cari-kamar"
             className="hidden lg:flex items-center justify-center bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-sm px-5 py-2.5 rounded-full transition-all shadow-sm"
           >
             Cari Kamar →
-          </a>
+          </Link>
 
           {/* Mobile hamburger */}
           <button
@@ -86,19 +86,19 @@ export function Header({ className }: HeaderProps) {
       {menuOpen && (
         <div className="pointer-events-auto absolute top-20 left-4 right-4 bg-surface/95 backdrop-blur-xl border border-border/60 rounded-3xl shadow-2xl p-4 flex flex-col gap-1 md:hidden">
           {[
-            { href: '#kamar', label: t('rooms') },
-            { href: '#fasilitas', label: t('facilities') },
-            { href: '#lokasi', label: t('location') },
-            { href: '#kontak', label: t('contact') },
+            { href: '/#kamar', label: t('rooms') },
+            { href: '/#fasilitas', label: t('facilities') },
+            { href: '/#lokasi', label: t('location') },
+            { href: '/#kontak', label: t('contact') },
           ].map(({ href, label }) => (
-            <a
+            <Link
               key={href}
               href={href}
               onClick={() => setMenuOpen(false)}
               className="rounded-2xl px-4 py-3 text-sm font-semibold text-foreground-muted transition-all hover:bg-primary-subtle hover:text-primary"
             >
               {label}
-            </a>
+            </Link>
           ))}
           <div className="mt-2 pt-2 border-t border-border/40 flex flex-col gap-2">
             <Link
@@ -109,13 +109,13 @@ export function Header({ className }: HeaderProps) {
               <LockKeyhole className="h-4 w-4" />
               Login Admin
             </Link>
-            <a
-              href="#kamar"
+            <Link
+              href="/cari-kamar"
               onClick={() => setMenuOpen(false)}
               className="flex items-center justify-center bg-primary text-primary-foreground font-bold text-sm px-5 py-3 rounded-2xl transition-all"
             >
               Cari Kamar →
-            </a>
+            </Link>
           </div>
         </div>
       )}

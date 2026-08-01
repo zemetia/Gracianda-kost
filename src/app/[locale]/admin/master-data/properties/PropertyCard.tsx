@@ -8,16 +8,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Link } from '@/i18n/navigation';
+import { propertyTypeLabel, type PropertyTypeName } from '@/lib/property';
 
 import { deactivatePropertyAction } from './actions';
-
-const TYPE_LABEL = {
-  KOST: 'Kost',
-  HOUSE: 'Rumah',
-  APARTMENT: 'Apartemen',
-  VILLA: 'Villa',
-  OTHER: 'Lainnya',
-} as const;
 
 const GENDER_LABEL = {
   PUTRA: 'Khusus Putra',
@@ -29,7 +22,7 @@ export interface PropertyCardProps {
   id: string;
   name: string;
   code: string;
-  type: keyof typeof TYPE_LABEL;
+  type: PropertyTypeName;
   genderPolicy: keyof typeof GENDER_LABEL;
   address: string | null;
   mapsUrl: string | null;
@@ -87,7 +80,7 @@ export function PropertyCard({
         </header>
 
         <div className="flex flex-wrap gap-1.5 px-5 pb-4">
-          <Badge variant="secondary">{TYPE_LABEL[type]}</Badge>
+          <Badge variant="secondary">{propertyTypeLabel(type)}</Badge>
           <Badge variant="outline">{GENDER_LABEL[genderPolicy]}</Badge>
         </div>
 

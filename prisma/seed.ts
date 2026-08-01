@@ -65,105 +65,7 @@ async function main() {
 
   console.log('Seeded/Fetched Floors: Lantai 1, Lantai 2');
 
-  // 4. Seed Rooms
-  const roomsToSeed = [
-    {
-      number: '101',
-      propertyId: property.id,
-      floorId: floor1.id,
-      price: 1500000,
-      lengthM: 3,
-      widthM: 4,
-      description: 'Kamar standar lantai 1 dengan AC.',
-      isActive: true,
-    },
-    {
-      number: '102',
-      propertyId: property.id,
-      floorId: floor1.id,
-      price: 1500000,
-      lengthM: 3,
-      widthM: 4,
-      description: 'Kamar standar lantai 1 dengan AC.',
-      isActive: true,
-    },
-    {
-      number: '201',
-      propertyId: property.id,
-      floorId: floor2.id,
-      price: 1750000,
-      lengthM: 3,
-      widthM: 5,
-      description: 'Kamar studio deluxe lantai 2 dengan kamar mandi dalam.',
-      isActive: true,
-    },
-  ];
-
-  for (const roomData of roomsToSeed) {
-    const room = await prisma.room.upsert({
-      where: {
-        propertyId_number: {
-          propertyId: roomData.propertyId,
-          number: roomData.number,
-        },
-      },
-      update: {},
-      create: roomData,
-    });
-
-    // Seed default monthly price
-    await prisma.roomPrice.upsert({
-      where: {
-        roomId_billingCycle_interval: {
-          roomId: room.id,
-          billingCycle: 'MONTHLY',
-          interval: 1,
-        },
-      },
-      update: {
-        price: roomData.price,
-      },
-      create: {
-        roomId: room.id,
-        billingCycle: 'MONTHLY',
-        interval: 1,
-        price: roomData.price,
-      },
-    });
-
-    // Add extra price options for Room 201 to test daily/weekly/etc.
-    if (roomData.number === '201') {
-      const extraPrices = [
-        { billingCycle: 'DAILY' as const, interval: 1, price: 150000 },
-        { billingCycle: 'WEEKLY' as const, interval: 1, price: 900000 },
-        { billingCycle: 'MONTHLY' as const, interval: 3, price: 5000000 }, // 3 bulanan
-      ];
-      for (const ep of extraPrices) {
-        await prisma.roomPrice.upsert({
-          where: {
-            roomId_billingCycle_interval: {
-              roomId: room.id,
-              billingCycle: ep.billingCycle,
-              interval: ep.interval,
-            },
-          },
-          update: {
-            price: ep.price,
-          },
-          create: {
-            roomId: room.id,
-            billingCycle: ep.billingCycle,
-            interval: ep.interval,
-            price: ep.price,
-          },
-        });
-      }
-    }
-  }
-
-  console.log('Seeded Rooms and RoomPrices: 101, 102, 201');
-
-  // 5. Seed Facilities (icon = nama icon lucide-react, kebab-case)
+  // 4. Seed Facilities (icon = nama icon lucide-react, kebab-case)
   const facilitiesToSeed: {
     name: string;
     icon: string;
@@ -240,6 +142,297 @@ async function main() {
   }
 
   console.log(`Seeded Facilities: ${facilitiesToSeed.length}`);
+
+  // 5. Seed Room Types + the rooms that belong to them
+  //
+  // The public catalogue is organised by type, so the seed has to produce a
+  // portfolio that actually exercises it: several types, more than one unit per
+  // type, one unit that overrides its type's facilities, and a couple of rooms
+  // left deliberately untyped — the "Tanpa Tipe" bucket is a real state the
+  // landing page has to be able to report, not an edge case.
+  const facilityIdByName = new Map(
+    (await prisma.facility.findMany({ select: { id: true, name: true } })).map((f) => [f.name, f.id]),
+  );
+
+  const facilityIds = (names: string[]) =>
+    names.flatMap((name) => {
+      const id = facilityIdByName.get(name);
+      if (!id) throw new Error(`Fasilitas belum di-seed: ${name}`);
+      return [id];
+    });
+
+  let floor3 = await prisma.floor.findFirst({
+    where: { name: 'Lantai 3', propertyId: property.id },
+  });
+  if (!floor3) {
+    floor3 = await prisma.floor.create({
+      data: { name: 'Lantai 3', order: 3, propertyId: property.id },
+    });
+  }
+
+  const roomTypesToSeed = [
+    {
+      name: 'Standar',
+      description:
+        'Kamar hemat dengan kipas angin dan kamar mandi luar. Cocok untuk mahasiswa yang lebih banyak di luar kamar.',
+      lengthM: 3,
+      widthM: 3,
+      price: 1300000,
+      facilities: ['Kipas Angin', 'Jendela', 'Kasur Single', 'Lemari Pakaian', 'Meja Belajar', 'Kunci Kamar Pribadi'],
+      prices: [
+        { billingCycle: 'MONTHLY' as const, interval: 1, price: 1300000 },
+        { billingCycle: 'MONTHLY' as const, interval: 3, price: 3750000 },
+      ],
+    },
+    {
+      name: 'Deluxe',
+      description:
+        'Kamar ber-AC dengan kamar mandi dalam dan meja kerja — pilihan paling banyak diambil karyawan.',
+      lengthM: 3,
+      widthM: 4,
+      price: 1750000,
+      facilities: [
+        'AC',
+        'Kasur Spring Bed',
+        'Lemari Pakaian',
+        'Meja Belajar',
+        'Kursi',
+        'Kamar Mandi Dalam',
+        'Shower',
+        'WiFi Kamar',
+      ],
+      prices: [
+        { billingCycle: 'MONTHLY' as const, interval: 1, price: 1750000 },
+        { billingCycle: 'MONTHLY' as const, interval: 3, price: 5000000 },
+        { billingCycle: 'YEARLY' as const, interval: 1, price: 19000000 },
+      ],
+    },
+    {
+      name: 'Studio Premium',
+      description:
+        'Unit terluas dengan balkon pribadi, water heater, dan kulkas. Dirancang untuk penghuni yang bekerja dari kamar.',
+      lengthM: 4,
+      widthM: 5,
+      price: 2400000,
+      facilities: [
+        'AC',
+        'Kasur Spring Bed',
+        'Lemari Pakaian',
+        'Meja Belajar',
+        'Kursi',
+        'TV',
+        'Kulkas Pribadi',
+        'Kamar Mandi Dalam',
+        'Water Heater',
+        'Balkon Pribadi',
+        'WiFi Kamar',
+      ],
+      prices: [
+        { billingCycle: 'MONTHLY' as const, interval: 1, price: 2400000 },
+        { billingCycle: 'MONTHLY' as const, interval: 6, price: 13500000 },
+        { billingCycle: 'YEARLY' as const, interval: 1, price: 26000000 },
+      ],
+    },
+  ];
+
+  const roomTypeIdByName = new Map<string, string>();
+
+  for (const typeData of roomTypesToSeed) {
+    const { facilities, prices, ...fields } = typeData;
+
+    const roomType = await prisma.roomType.upsert({
+      where: { propertyId_name: { propertyId: property.id, name: fields.name } },
+      update: fields,
+      create: { ...fields, propertyId: property.id },
+    });
+
+    // Replace-then-write, same shape as roomTypeService.update() — re-running
+    // the seed must converge, not accumulate duplicate rows.
+    await prisma.roomTypeFacility.deleteMany({ where: { roomTypeId: roomType.id } });
+    await prisma.roomTypeFacility.createMany({
+      data: facilityIds(facilities).map((facilityId) => ({ roomTypeId: roomType.id, facilityId })),
+    });
+
+    await prisma.roomTypePrice.deleteMany({ where: { roomTypeId: roomType.id } });
+    await prisma.roomTypePrice.createMany({
+      data: prices.map((price) => ({ ...price, roomTypeId: roomType.id })),
+    });
+
+    roomTypeIdByName.set(roomType.name, roomType.id);
+  }
+
+  console.log(`Seeded RoomTypes: ${roomTypesToSeed.map((t) => t.name).join(', ')}`);
+
+  // `typeName: null` = deliberately left out of every type, so the public
+  // "Tanpa Tipe" bucket has something to report. `tiers` are the room's OWN
+  // packages — Room.price / RoomPrice stay authoritative for billing, the type
+  // above only supplies defaults.
+  const roomsToSeed = [
+    {
+      number: '101',
+      floorId: floor1.id,
+      typeName: 'Standar',
+      price: 1300000,
+      lengthM: 3,
+      widthM: 3,
+      description: null,
+      tiers: [],
+    },
+    {
+      number: '102',
+      floorId: floor1.id,
+      typeName: 'Standar',
+      price: 1300000,
+      lengthM: 3,
+      widthM: 3,
+      description: null,
+      tiers: [],
+    },
+    {
+      number: '103',
+      floorId: floor1.id,
+      typeName: 'Deluxe',
+      price: 1750000,
+      lengthM: 3,
+      widthM: 4,
+      description: null,
+      tiers: [],
+    },
+    {
+      number: '104',
+      floorId: floor1.id,
+      typeName: 'Deluxe',
+      price: 1800000,
+      lengthM: 3,
+      widthM: 4,
+      description: 'Deluxe pojok dengan TV tambahan dan jendela menghadap taman.',
+      tiers: [],
+    },
+    {
+      number: '105',
+      floorId: floor1.id,
+      typeName: null,
+      price: 1400000,
+      lengthM: 3,
+      widthM: 3,
+      description: 'Kamar sisa konversi gudang — belum dikelompokkan ke tipe mana pun.',
+      tiers: [],
+    },
+    {
+      number: '201',
+      floorId: floor2.id,
+      typeName: 'Deluxe',
+      price: 1750000,
+      lengthM: 3,
+      widthM: 4,
+      description: 'Kamar studio deluxe lantai 2 dengan kamar mandi dalam.',
+      // The only unit with short-stay packages — proves the public page reads
+      // per-room tiers, not the type's.
+      tiers: [
+        { billingCycle: 'DAILY' as const, interval: 1, price: 150000 },
+        { billingCycle: 'WEEKLY' as const, interval: 1, price: 900000 },
+        { billingCycle: 'MONTHLY' as const, interval: 3, price: 5000000 },
+      ],
+    },
+    {
+      number: '202',
+      floorId: floor2.id,
+      typeName: 'Deluxe',
+      price: 1750000,
+      lengthM: 3,
+      widthM: 4,
+      description: null,
+      tiers: [],
+    },
+    {
+      number: '203',
+      floorId: floor2.id,
+      typeName: 'Studio Premium',
+      price: 2400000,
+      lengthM: 4,
+      widthM: 5,
+      description: null,
+      tiers: [],
+    },
+    {
+      number: '301',
+      floorId: floor3.id,
+      typeName: 'Studio Premium',
+      price: 2500000,
+      lengthM: 4,
+      widthM: 5,
+      description: 'Unit sudut lantai 3, balkon menghadap timur.',
+      tiers: [{ billingCycle: 'YEARLY' as const, interval: 1, price: 27000000 }],
+    },
+    {
+      number: '302',
+      floorId: floor3.id,
+      typeName: null,
+      price: 2200000,
+      lengthM: 4,
+      widthM: 4,
+      description: 'Bekas unit pengelola, disewakan tanpa tipe baku.',
+      tiers: [],
+    },
+  ];
+
+  for (const roomData of roomsToSeed) {
+    const { typeName, tiers, ...fields } = roomData;
+    const roomTypeId = typeName ? (roomTypeIdByName.get(typeName) ?? null) : null;
+    const data = { ...fields, roomTypeId, isActive: true };
+
+    // The seed owns these demo units outright: re-running it converges them to
+    // the state above rather than leaving half-edited leftovers behind.
+    const room = await prisma.room.upsert({
+      where: { propertyId_number: { propertyId: property.id, number: fields.number } },
+      update: data,
+      create: { ...data, propertyId: property.id },
+    });
+
+    const allTiers = [
+      { billingCycle: 'MONTHLY' as const, interval: 1, price: fields.price },
+      ...tiers,
+    ];
+
+    for (const tier of allTiers) {
+      await prisma.roomPrice.upsert({
+        where: {
+          roomId_billingCycle_interval: {
+            roomId: room.id,
+            billingCycle: tier.billingCycle,
+            interval: tier.interval,
+          },
+        },
+        update: { price: tier.price, isActive: true },
+        create: { roomId: room.id, ...tier },
+      });
+    }
+  }
+
+  // One unit that overrides its type: 104 carries its own facility list (the
+  // Deluxe set plus a TV). Everything else inherits, which is what makes the
+  // room-overrides-type rule visible on the public pages.
+  const room104 = await prisma.room.findUnique({
+    where: { propertyId_number: { propertyId: property.id, number: '104' } },
+  });
+  if (room104) {
+    await prisma.roomFacility.deleteMany({ where: { roomId: room104.id } });
+    await prisma.roomFacility.createMany({
+      data: facilityIds([
+        'AC',
+        'Kasur Spring Bed',
+        'Lemari Pakaian',
+        'Meja Belajar',
+        'Kursi',
+        'Kamar Mandi Dalam',
+        'Shower',
+        'WiFi Kamar',
+        'TV',
+      ]).map((facilityId) => ({ roomId: room104.id, facilityId })),
+    });
+  }
+
+  console.log(`Seeded Rooms: ${roomsToSeed.length} (2 sengaja tanpa tipe)`);
 
   // N. Seed default Payment Method — bank/e-wallet ditambahkan pemilik sendiri lewat UI
   await prisma.paymentMethod.upsert({
