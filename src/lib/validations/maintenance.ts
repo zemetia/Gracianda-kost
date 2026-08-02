@@ -16,27 +16,4 @@ export const maintenanceSchema = z
     path: ['roomId'],
   });
 
-export const incidentSchema = z.object({
-  category: z.enum([
-    'PELANGGARAN_ATURAN',
-    'GANGGUAN',
-    'KERUSAKAN',
-    'KEHILANGAN',
-    'KELUHAN_PENGHUNI',
-    'LAPORAN_SECURITY',
-  ]),
-  status: z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED']).default('OPEN'),
-  date: z.coerce.date(),
-  propertyId: z.string().min(1, 'Properti wajib dipilih'),
-  roomId: z.string().optional().nullable(),
-  location: z.string().max(150).optional().nullable(),
-  description: z.string().min(1, 'Deskripsi wajib diisi').max(2000),
-});
-
-export const incidentStatusSchema = z.object({
-  status: z.enum(['OPEN', 'IN_PROGRESS', 'RESOLVED']),
-});
-
 export type MaintenanceInput = z.infer<typeof maintenanceSchema>;
-export type IncidentInput = z.infer<typeof incidentSchema>;
-export type IncidentStatusInput = z.infer<typeof incidentStatusSchema>;

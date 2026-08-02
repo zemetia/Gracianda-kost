@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { BLACKLIST_REASONS } from '@/lib/blacklist';
+
 // Optional free text that an empty input must be able to CLEAR — `''` and
 // `undefined` both become null so an update writes null instead of silently
 // keeping the previous value.
@@ -113,10 +115,31 @@ export const checkoutContractSchema = z.object({
   damageCost: z.coerce.number().min(0).optional(),
 });
 
-export const blacklistSchema = z.object({
-  isBlacklisted: z.coerce.boolean(),
-  blacklistNote: z.string().max(500).optional(),
-});
+// Masuk daftar hitam wajib beralasan: kategori supaya beratnya terbaca sekali
+// lihat di daftar, kronologi supaya bisa dipertanggungjawabkan saat orangnya
+// membantah. Mengeluarkan dari daftar tidak menuntut apa-apa — makanya
+// pemeriksaannya `superRefine`, bukan field wajib.
+export const blacklistSchema = z
+  .object({
+    isBlacklisted: z.coerce.boolean(),
+    blacklistReason: optionalEnum(BLACKLIST_REASONS),
+    // Clearing the textarea must actually erase the reason — `undefined` would
+    // leave the old note attached to a tenant nobody flagged anymore.
+    blacklistNote: optionalText(1000),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.isBlacklisted) return;
+    if (!value.blacklistReason) {
+      ctx.addIssue({ code: 'custom', path: ['blacklistReason'], message: 'Kategori wajib dipilih' });
+    }
+    if (!value.blacklistNote) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['blacklistNote'],
+        message: 'Kronologi wajib diisi — daftar hitam tanpa alasan tidak bisa dipertanggungjawabkan',
+      });
+    }
+  });
 
 export type TenantInput = z.infer<typeof tenantSchema>;
 export type OccupantInput = z.infer<typeof occupantSchema>;

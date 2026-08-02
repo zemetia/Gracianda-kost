@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { NOT_DELETED } from '@/lib/record-status';
 import type { AdminSearchResponse } from '@/services/types';
 
 const MAX_PER_GROUP = 6;
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
   const [rooms, tenants, contracts] = await Promise.all([
     prisma.room.findMany({
       where: {
+        ...NOT_DELETED,
+        property: NOT_DELETED,
         OR: [
           { number: { contains: q, mode: 'insensitive' } },
           { property: { name: { contains: q, mode: 'insensitive' } } },

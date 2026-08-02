@@ -88,9 +88,15 @@ export async function updateRoomAction(
   return {};
 }
 
-export async function deactivateRoomAction(id: string): Promise<void> {
+export async function deactivateRoomAction(id: string): Promise<{ error?: string }> {
   const session = await requireRole(CAN_MANAGE);
-  await roomService.deactivate(id);
+
+  try {
+    await roomService.deactivate(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menonaktifkan kamar' };
+  }
+
   await auditService.log({
     userId: session.user.id,
     action: 'UPDATE',
@@ -99,6 +105,47 @@ export async function deactivateRoomAction(id: string): Promise<void> {
     after: { isActive: false },
   });
   revalidatePath('/admin/master-data/rooms');
+  return {};
+}
+
+export async function activateRoomAction(id: string): Promise<{ error?: string }> {
+  const session = await requireRole(CAN_MANAGE);
+
+  try {
+    await roomService.activate(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal mengaktifkan kamar' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'UPDATE',
+    entityType: 'Room',
+    entityId: id,
+    after: { isActive: true },
+  });
+  revalidatePath('/admin/master-data/rooms');
+  return {};
+}
+
+export async function deleteRoomAction(id: string): Promise<{ error?: string }> {
+  const session = await requireRole(CAN_MANAGE);
+
+  try {
+    await roomService.softDelete(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menghapus kamar' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'DELETE',
+    entityType: 'Room',
+    entityId: id,
+    after: { deletedAt: new Date().toISOString() },
+  });
+  revalidatePath('/admin/master-data/rooms');
+  return {};
 }
 
 export interface DuplicateRoomState {

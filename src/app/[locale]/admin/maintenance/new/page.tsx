@@ -13,7 +13,9 @@ export default async function NewMaintenancePage({ searchParams }: Props) {
   const { propertyId, roomId } = await searchParams;
   const [properties, rooms, categories] = await Promise.all([
     propertyService.listActive(),
-    roomService.list(),
+    // Parked units included: a room taken offline for renovation is exactly
+    // the one a maintenance record is being written for.
+    roomService.list(undefined, 'all'),
     maintenanceService.listCategories(),
   ]);
 

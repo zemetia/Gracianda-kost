@@ -2,6 +2,7 @@
 // Components, Server Actions, or Route Handlers — never from 'use client' files.
 
 import { prisma } from '@/lib/prisma';
+import { recordStatusWhere } from '@/lib/record-status';
 import { resolveInherited } from '@/lib/room-template';
 
 /**
@@ -126,9 +127,9 @@ function loadRoomRows(filters: CatalogFilters) {
 
   return prisma.room.findMany({
     where: {
-      isActive: true,
+      ...recordStatusWhere('active'),
       property: {
-        isActive: true,
+        ...recordStatusWhere('active'),
         ...(filters.propertyId ? { id: filters.propertyId } : {}),
         ...(group?.propertyId ? { id: group.propertyId } : {}),
         ...(filters.propertyType
@@ -322,7 +323,7 @@ export const catalogService = {
   /** One unit, with the type it belongs to and the property's contact details. */
   async getRoom(roomId: string) {
     const row = await prisma.room.findFirst({
-      where: { id: roomId, isActive: true, property: { isActive: true } },
+      where: { id: roomId, ...recordStatusWhere('active'), property: recordStatusWhere('active') },
       include: ROOM_INCLUDE,
     });
     if (!row) return null;
@@ -356,12 +357,12 @@ export const catalogService = {
   async listFilterOptions() {
     const [properties, roomTypes, facilities] = await Promise.all([
       prisma.property.findMany({
-        where: { isActive: true },
+        where: recordStatusWhere('active'),
         select: { id: true, name: true, type: true, city: true },
         orderBy: { name: 'asc' },
       }),
       prisma.roomType.findMany({
-        where: { isActive: true, property: { isActive: true } },
+        where: { ...recordStatusWhere('active'), property: recordStatusWhere('active') },
         select: { id: true, name: true, propertyId: true },
         orderBy: { name: 'asc' },
       }),
@@ -370,7 +371,10 @@ export const catalogService = {
       prisma.facility.findMany({
         where: {
           category: 'ROOM',
-          OR: [{ rooms: { some: {} } }, { roomTypes: { some: {} } }],
+          OR: [
+            { rooms: { some: { room: recordStatusWhere('active') } } },
+            { roomTypes: { some: { roomType: recordStatusWhere('active') } } },
+          ],
         },
         select: { id: true, name: true, icon: true },
         orderBy: { name: 'asc' },

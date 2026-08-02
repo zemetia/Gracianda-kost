@@ -17,6 +17,9 @@ model User {
   auditLogs AuditLog[]
   reminders PaymentReminder[]
   expenses  Expense[]
+  // Siapa yang memasukkan seorang penyewa ke daftar hitam — keputusan yang
+  // menutup pintu untuk orang lain harus punya nama di belakangnya.
+  blacklisted Tenant[] @relation("TenantBlacklistedBy")
 
   @@map("users")
 }

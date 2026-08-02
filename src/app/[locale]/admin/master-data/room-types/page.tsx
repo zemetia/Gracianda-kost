@@ -1,21 +1,21 @@
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Money } from '@/components/ui/Money';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { getPropertyScope } from '@/lib/property-scope';
+import { parseRecordStatus } from '@/lib/record-status';
 import { propertyService } from '@/services/property.service';
 import { roomTypeService } from '@/services/room-type.service';
 
-import { deactivateRoomTypeAction } from './actions';
+import { StatusFilter } from '../StatusFilter';
+import { RoomTypeCard } from './RoomTypeCard';
 
 interface Props {
-  searchParams: Promise<{ propertyId?: string }>;
+  searchParams: Promise<{ propertyId?: string; status?: string }>;
 }
 
 export default async function RoomTypesPage({ searchParams }: Props) {
-  const { propertyId } = await searchParams;
+  const { propertyId, status } = await searchParams;
+  const selectedStatus = parseRecordStatus(status);
   const activeProperties = await propertyService.listActive();
 
   let selectedPropertyId = await getPropertyScope(propertyId);
@@ -23,7 +23,14 @@ export default async function RoomTypesPage({ searchParams }: Props) {
     selectedPropertyId = activeProperties[0]?.id;
   }
 
-  const roomTypes = selectedPropertyId ? await roomTypeService.list(selectedPropertyId) : [];
+  const [roomTypes, statusCounts] = await Promise.all([
+    selectedPropertyId
+      ? roomTypeService.list(selectedPropertyId, selectedStatus)
+      : Promise.resolve([]),
+    selectedPropertyId
+      ? roomTypeService.counts(selectedPropertyId)
+      : Promise.resolve({ active: 0, inactive: 0 }),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -66,55 +73,32 @@ export default async function RoomTypesPage({ searchParams }: Props) {
 
       {selectedPropertyId && (
         <>
+          <StatusFilter
+            status={selectedStatus}
+            counts={statusCounts}
+            basePath="/admin/master-data/room-types"
+            params={{ propertyId: selectedPropertyId }}
+          />
+
           {roomTypes.length === 0 ? (
-            <p className="py-12 text-center text-sm text-foreground-muted">
-              Belum ada tipe kamar. Buat satu, lalu pilih tipenya saat menambah kamar.
+            <p className="text-foreground-muted py-12 text-center text-sm">
+              {selectedStatus === 'inactive'
+                ? 'Tidak ada tipe kamar yang dinonaktifkan.'
+                : 'Belum ada tipe kamar. Buat satu, lalu pilih tipenya saat menambah kamar.'}
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {roomTypes.map((type) => (
-                <Card key={type.id} className="flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-base font-semibold text-foreground">{type.name}</p>
-                    <Badge variant={type.isActive ? 'success' : 'outline'}>
-                      {type.isActive ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </div>
-
-                  <p>
-                    <Money value={type.price ? type.price.toNumber() : null} size="total" />
-                    <span className="ml-1 text-xs font-normal text-foreground-muted">/bulan (acuan)</span>
-                  </p>
-
-                  <p className="line-clamp-2 text-sm text-foreground-muted">
-                    {type.facilities.length > 0
-                      ? type.facilities.map((f) => f.facility.name).join(', ')
-                      : 'Belum ada fasilitas ditambahkan.'}
-                  </p>
-
-                  <Link
-                    href={`/admin/master-data/rooms?propertyId=${selectedPropertyId}`}
-                    className="text-sm text-foreground-muted hover:text-primary hover:underline"
-                  >
-                    <span className="font-medium tabular-nums text-foreground">{type._count.rooms}</span>{' '}
-                    kamar memakai tipe ini
-                  </Link>
-
-                  <div className="mt-auto flex justify-end gap-2 border-t border-border pt-3">
-                    <Link href={`/admin/master-data/room-types/${type.id}`}>
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
-                    </Link>
-                    {type.isActive && (
-                      <form action={deactivateRoomTypeAction.bind(null, type.id)}>
-                        <Button variant="ghost" size="sm" type="submit">
-                          Nonaktifkan
-                        </Button>
-                      </form>
-                    )}
-                  </div>
-                </Card>
+                <RoomTypeCard
+                  key={type.id}
+                  id={type.id}
+                  propertyId={selectedPropertyId}
+                  name={type.name}
+                  price={type.price ? type.price.toNumber() : null}
+                  facilityNames={type.facilities.map((f) => f.facility.name)}
+                  roomCount={type._count.rooms}
+                  isActive={type.isActive}
+                />
               ))}
             </div>
           )}

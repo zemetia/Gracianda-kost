@@ -4,6 +4,7 @@ export * from './property';
 export * from './tenant';
 export * from './payment';
 export * from './maintenance';
+export * from './incident';
 export * from './setting';
 export * from './expense';
 export * from './user';

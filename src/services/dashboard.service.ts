@@ -3,6 +3,7 @@
 // state" principle as getPaymentStatus().
 
 import { prisma } from '@/lib/prisma';
+import { recordStatusWhere } from '@/lib/record-status';
 import { DUE_SOON_DAYS, getPaymentBucket, paymentService } from './payment.service';
 
 function monthRange(date = new Date()) {
@@ -26,10 +27,12 @@ const ENDING_SOON_DAYS = 30;
 export const dashboardService = {
   async getRoomStats(propertyId?: string) {
     const [total, occupied] = await Promise.all([
-      prisma.room.count({ where: { isActive: true, propertyId: propertyId || undefined } }),
+      prisma.room.count({
+        where: { ...recordStatusWhere('active'), propertyId: propertyId || undefined },
+      }),
       prisma.room.count({
         where: {
-          isActive: true,
+          ...recordStatusWhere('active'),
           propertyId: propertyId || undefined,
           contracts: { some: { status: 'ACTIVE' } },
         },
@@ -88,7 +91,7 @@ export const dashboardService = {
         prisma.incident.count({ where: { status: 'OPEN', propertyId: propertyId || undefined } }),
         prisma.room.count({
           where: {
-            isActive: true,
+            ...recordStatusWhere('active'),
             propertyId: propertyId || undefined,
             contracts: { none: { status: 'ACTIVE' } },
           },

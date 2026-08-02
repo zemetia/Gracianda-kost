@@ -100,6 +100,58 @@ Duplication (`roomService.duplicate`) clones one room into up to 50 units: numbe
 
 ---
 
+## Nonaktif vs Terhapus (Property / Room / RoomType)
+
+Two independent lifecycles on the same three models. The rules live once in [`src/lib/record-status.ts`](../../src/lib/record-status.ts) — never hand-roll the `where` clause.
+
+| State | Column | Visible to admin? | Visible to public? | Reversible? |
+|---|---|---|---|---|
+| Aktif | `isActive = true`, `deletedAt = null` | yes | yes | — |
+| Nonaktif | `isActive = false`, `deletedAt = null` | **only** behind the `?status=inactive` filter, never merged into the active list | no | yes, "Aktifkan" |
+| Terhapus | `deletedAt != null` (and `isActive = false`) | never, anywhere | no | no |
+
+- `recordStatusWhere(status)` is the only correct filter for a list; `NOT_DELETED` is for queries that may legitimately include parked records (`roomService.list(id, 'all')` — pickers for maintenance/insiden, the command palette).
+- A soft delete always sets `isActive = false` as well, so a legacy query that only knows about `isActive` can never surface a deleted row.
+- Never a hard delete: contracts, payments, maintenance records, and `AuditLog` entries still point at the row.
+- Deletes are refused, with a message, when history would break: a room with an ACTIVE contract, a room type that rooms still inherit from, a property with any running contract. Deleting a property cascades the soft delete to its rooms and room types — otherwise they linger with no property tab left to reach them from.
+- UI: `StatusFilter` (server) renders the two buckets with counts; `RecordActions` (client) is the shared card footer — both destructive paths go through `ConfirmDialog`.
+
+---
+
+## Insiden: properti, kamar, orang
+
+An incident is filed against three axes at once, and all three are queryable:
+
+| Axis | Column | Notes |
+|---|---|---|
+| Properti | `Incident.propertyId` | Required — every report belongs to a building. |
+| Kamar | `Incident.roomId` (nullable) + `location` | A unit if it happened inside one, otherwise the free-text spot ("Parkiran"); neither set means the property as a whole. `incidentPlaceLabel()` in [`src/lib/incident.ts`](../../src/lib/incident.ts) is the only place this fallback chain is written. |
+| Orang | `IncidentPerson[]` | Any number of people per incident, each with a role: `PELAPOR` / `TERLIBAT` / `SAKSI` / `TERDAMPAK`. |
+
+`IncidentPerson` rules:
+
+- **`name` is always stored**, even when the row links to a tenant — a snapshot, same doctrine as `Contract.rentPrice`. An old report must stay readable after the tenant moves out or their name is corrected.
+- `tenantId` / `occupantId` are both optional and mutually exclusive. Empty means someone with no record in the system — a guest, a courier, a neighbour. Outsiders show up in incidents constantly and must never be unrecordable.
+- The form submits an opaque `tenant:<id>` / `occupant:<id>` ref from one `Combobox`; `personRef()` / `parsePersonRef()` are the only code that knows that format.
+- `occupantId` is `onDelete: SetNull` (occupant rows cascade away with their contract); `tenantId` is restrict, like every other tenant reference.
+- `incidentService.listForTenant(id)` is the per-person view — every incident naming that person **anywhere in the building**, not just in their room. It backs "Riwayat Insiden" on the tenant page, which sits directly above the blacklist card because that history is what the blacklist decision is made from.
+
+Enum labels live in `src/lib/incident.ts`, never in a page-local map.
+
+---
+
+## Blacklist Penyewa
+
+A blacklist entry is a decision about a person, so the schema records who made it and why — not just a boolean. Columns on `Tenant`: `isBlacklisted`, `blacklistReason` (enum `BlacklistReason`), `blacklistNote` (kronologi), `blacklistedAt`, `blacklistedById` → `User` (`ON DELETE SET NULL`).
+
+- Wording, `<Select>` options, and badge tone come from [`src/lib/blacklist.ts`](../../src/lib/blacklist.ts) — never a page-local label map. Only `KEAMANAN` renders `destructive`; if every category is red, none of them is.
+- `blacklistSchema` requires both a category and a note **only when `isBlacklisted` is true** (`superRefine`) — removing someone demands nothing.
+- `tenantService.setBlacklist(id, data, actorId)` owns two rules: `blacklistedAt` is set once, when the entry is created, so editing the kronologi never makes the person look newly flagged; removing clears reason, note, date, and actor together, leaving the trail in `AuditLog` where it belongs.
+- Rows from before these columns existed have `blacklistReason = null`. They get their own filter bucket via the sentinel `UNCATEGORIZED` (`?kategori=TANPA_KATEGORI`), which is not an enum member — the chip only appears when the count is non-zero.
+- The list is **not** a hard block. `/admin/contracts/new` still lets a blacklisted tenant through behind a warning plus an acknowledgement checkbox; the page's job is to make sure whoever ticks it knows what they are agreeing to. Hence the "Masih menghuni" banner: a blacklisted tenant with an ACTIVE contract is unfinished work, not an archive entry.
+
+---
+
 ## Prisma Client Singleton
 
 ```ts
