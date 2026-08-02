@@ -88,9 +88,15 @@ export async function updateRoomTypeAction(
   return {};
 }
 
-export async function deactivateRoomTypeAction(id: string): Promise<void> {
+export async function deactivateRoomTypeAction(id: string): Promise<{ error?: string }> {
   const session = await requireRole(CAN_MANAGE);
-  await roomTypeService.deactivate(id);
+
+  try {
+    await roomTypeService.deactivate(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menonaktifkan tipe kamar' };
+  }
+
   await auditService.log({
     userId: session.user.id,
     action: 'UPDATE',
@@ -99,6 +105,48 @@ export async function deactivateRoomTypeAction(id: string): Promise<void> {
     after: { isActive: false },
   });
   revalidatePath('/admin/master-data/room-types');
+  return {};
+}
+
+export async function activateRoomTypeAction(id: string): Promise<{ error?: string }> {
+  const session = await requireRole(CAN_MANAGE);
+
+  try {
+    await roomTypeService.activate(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal mengaktifkan tipe kamar' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'UPDATE',
+    entityType: 'RoomType',
+    entityId: id,
+    after: { isActive: true },
+  });
+  revalidatePath('/admin/master-data/room-types');
+  return {};
+}
+
+export async function deleteRoomTypeAction(id: string): Promise<{ error?: string }> {
+  const session = await requireRole(CAN_MANAGE);
+
+  try {
+    await roomTypeService.softDelete(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menghapus tipe kamar' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'DELETE',
+    entityType: 'RoomType',
+    entityId: id,
+    after: { deletedAt: new Date().toISOString() },
+  });
+  revalidatePath('/admin/master-data/room-types');
+  revalidatePath('/admin/master-data/rooms');
+  return {};
 }
 
 export async function uploadRoomTypePhotoAction(

@@ -2,13 +2,23 @@
 // Components, Server Actions, or Route Handlers — never from 'use client' files.
 
 import { prisma } from '@/lib/prisma';
+import { NOT_DELETED, recordStatusWhere, type RecordStatus } from '@/lib/record-status';
 import { generateRoomNumbers } from '@/lib/room-template';
 import type { DuplicateRoomInput, RoomInput } from '@/lib/validations';
 
 export const roomService = {
-  list(propertyId?: string) {
+  /**
+   * One status bucket at a time — deactivated units are never mixed into the
+   * active list. `'all'` is for pickers that may legitimately reference a
+   * parked unit (maintenance on a room taken offline for renovation); nothing
+   * ever returns a soft-deleted one.
+   */
+  list(propertyId?: string, status: RecordStatus | 'all' = 'active') {
     return prisma.room.findMany({
-      where: propertyId ? { propertyId } : undefined,
+      where: {
+        ...(status === 'all' ? NOT_DELETED : recordStatusWhere(status)),
+        propertyId: propertyId || undefined,
+      },
       include: {
         property: true,
         floor: true,
@@ -21,9 +31,18 @@ export const roomService = {
     });
   },
 
+  async counts(propertyId?: string) {
+    const scope = { propertyId: propertyId || undefined };
+    const [active, inactive] = await Promise.all([
+      prisma.room.count({ where: { ...scope, ...recordStatusWhere('active') } }),
+      prisma.room.count({ where: { ...scope, ...recordStatusWhere('inactive') } }),
+    ]);
+    return { active, inactive };
+  },
+
   getById(id: string) {
-    return prisma.room.findUnique({
-      where: { id },
+    return prisma.room.findFirst({
+      where: { id, ...NOT_DELETED },
       include: {
         property: true,
         floor: true,
@@ -192,8 +211,8 @@ export const roomService = {
   // room type's gallery already covers what the copies look like, and copying
   // a specific unit's condition photos onto ten other units is a lie.
   async duplicate(sourceId: string, input: DuplicateRoomInput) {
-    const source = await prisma.room.findUnique({
-      where: { id: sourceId },
+    const source = await prisma.room.findFirst({
+      where: { id: sourceId, ...NOT_DELETED },
       include: { facilities: true, prices: true },
     });
     if (!source) throw new Error('Kamar sumber tidak ditemukan');
@@ -201,12 +220,21 @@ export const roomService = {
     const numbers = generateRoomNumbers(input);
     if (numbers.length === 0) throw new Error('Tidak ada nomor unit yang dihasilkan');
 
+    // Soft-deleted rooms still hold their number (the unique constraint does
+    // not care that they are hidden), so they have to be reported here — the
+    // insert would fail on them anyway, just with an opaque message.
     const taken = await prisma.room.findMany({
       where: { propertyId: source.propertyId, number: { in: numbers } },
-      select: { number: true },
+      select: { number: true, deletedAt: true },
     });
     if (taken.length > 0) {
-      throw new Error(`Nomor sudah dipakai di properti ini: ${taken.map((r) => r.number).join(', ')}`);
+      const deleted = taken.filter((r) => r.deletedAt);
+      throw new Error(
+        `Nomor sudah dipakai di properti ini: ${taken.map((r) => r.number).join(', ')}` +
+          (deleted.length > 0
+            ? ` (${deleted.map((r) => r.number).join(', ')} milik kamar yang sudah dihapus)`
+            : ''),
+      );
     }
 
     // An empty floorId from the form means "same floor as the source", not
@@ -246,17 +274,38 @@ export const roomService = {
     );
   },
 
-  // Soft-disable only — rooms with contract/payment history should never be
-  // hard-deleted once Fase 2+ modules land.
+  // Parked, not gone: the unit drops out of the public site and out of "sewa
+  // baru", but the admin still finds it behind the Nonaktif filter.
   deactivate(id: string) {
     return prisma.room.update({ where: { id }, data: { isActive: false } });
+  },
+
+  activate(id: string) {
+    return prisma.room.update({ where: { id }, data: { isActive: true } });
+  },
+
+  // Permanent removal from every list. Never a hard delete — contracts,
+  // payments, and maintenance records still point here.
+  async softDelete(id: string) {
+    const activeContracts = await prisma.contract.count({
+      where: { roomId: id, status: 'ACTIVE' },
+    });
+    if (activeContracts > 0) {
+      throw new Error('Kamar ini masih terisi kontrak aktif. Akhiri kontraknya dulu sebelum menghapus.');
+    }
+
+    return prisma.room.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
+    });
   },
 
   // Rooms eligible to be picked in "sewa baru" — active and with no ACTIVE contract.
   listAvailable(propertyId?: string) {
     return prisma.room.findMany({
       where: {
-        isActive: true,
+        ...recordStatusWhere('active'),
+        property: NOT_DELETED,
         contracts: { none: { status: 'ACTIVE' } },
         propertyId: propertyId || undefined,
       },

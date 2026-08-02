@@ -8,8 +8,11 @@ import { FormCard, FormError, FormGrid, FormLayout, FormStickyBar } from '@/comp
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { INCIDENT_CATEGORY_OPTIONS } from '@/lib/incident';
+import type { IncidentPersonCandidate } from '@/services/incident.service';
 
 import { createIncidentAction, type IncidentFormState } from './actions';
+import { IncidentPeopleField, type IncidentPersonDraft } from './IncidentPeopleField';
 
 interface Property {
   id: string;
@@ -23,25 +26,18 @@ interface Room {
   floor: { name: string } | null;
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  PELANGGARAN_ATURAN: 'Pelanggaran Aturan',
-  GANGGUAN: 'Gangguan',
-  KERUSAKAN: 'Kerusakan',
-  KEHILANGAN: 'Kehilangan',
-  KELUHAN_PENGHUNI: 'Keluhan Penghuni',
-  LAPORAN_SECURITY: 'Laporan Security',
-};
-
 const initialState: IncidentFormState = {};
 
 export function IncidentForm({
   properties,
   rooms,
+  candidates,
   initialPropertyId,
   initialRoomId,
 }: {
   properties: Property[];
   rooms: Room[];
+  candidates: IncidentPersonCandidate[];
   initialPropertyId?: string | undefined;
   initialRoomId?: string | undefined;
 }) {
@@ -49,6 +45,7 @@ export function IncidentForm({
   const [selectedPropertyId, setSelectedPropertyId] = useState(initialPropertyId ?? '');
   // Controlled so switching property drops a room that no longer belongs to it.
   const [selectedRoomId, setSelectedRoomId] = useState(initialRoomId ?? '');
+  const [people, setPeople] = useState<IncidentPersonDraft[]>([]);
 
   const roomOptions = rooms
     .filter((room) => room.propertyId === selectedPropertyId)
@@ -68,7 +65,7 @@ export function IncidentForm({
               label="Kategori"
               required
               placeholder="Pilih kategori"
-              options={Object.entries(CATEGORY_LABEL).map(([value, label]) => ({ value, label }))}
+              options={INCIDENT_CATEGORY_OPTIONS}
               error={state.fieldErrors?.category?.[0]}
             />
             <DatePicker
@@ -84,7 +81,7 @@ export function IncidentForm({
             label="Deskripsi"
             rows={4}
             required
-            placeholder="Kronologi singkat, siapa yang terlibat, tindakan yang sudah diambil."
+            placeholder="Kronologi singkat dan tindakan yang sudah diambil."
             error={state.fieldErrors?.description?.[0]}
           />
         </FormCard>
@@ -126,6 +123,22 @@ export function IncidentForm({
               error={state.fieldErrors?.location?.[0]}
             />
           </FormGrid>
+        </FormCard>
+
+        <FormCard
+          title="Orang Terkait"
+          description="Siapa saja yang terlibat, melapor, atau melihat kejadian ini."
+        >
+          <IncidentPeopleField
+            people={people}
+            onChange={setPeople}
+            candidates={candidates}
+            propertyId={selectedPropertyId}
+            roomId={selectedRoomId}
+          />
+          {state.fieldErrors?.people?.[0] && (
+            <p className="text-sm text-destructive">{state.fieldErrors.people[0]}</p>
+          )}
         </FormCard>
 
         <FormError message={state.error} />

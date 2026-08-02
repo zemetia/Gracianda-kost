@@ -1,25 +1,38 @@
 // Server-only: Prisma-backed domain service.
 import { prisma } from '@/lib/prisma';
+import { NOT_DELETED, recordStatusWhere, type RecordStatus } from '@/lib/record-status';
 import type { PropertyInput } from '@/lib/validations';
 
 export const propertyService = {
-  list() {
+  /** One status bucket at a time — deactivated properties are never mixed in. */
+  list(status: RecordStatus = 'active') {
     return prisma.property.findMany({
+      where: recordStatusWhere(status),
       orderBy: { name: 'asc' },
-      include: { _count: { select: { rooms: true, floors: true } } },
+      include: {
+        _count: { select: { rooms: { where: NOT_DELETED }, floors: true } },
+      },
     });
+  },
+
+  async counts() {
+    const [active, inactive] = await Promise.all([
+      prisma.property.count({ where: recordStatusWhere('active') }),
+      prisma.property.count({ where: recordStatusWhere('inactive') }),
+    ]);
+    return { active, inactive };
   },
 
   listActive() {
     return prisma.property.findMany({
-      where: { isActive: true },
+      where: recordStatusWhere('active'),
       orderBy: { name: 'asc' },
     });
   },
 
   async getById(id: string) {
-    const property = await prisma.property.findUnique({
-      where: { id },
+    const property = await prisma.property.findFirst({
+      where: { id, ...NOT_DELETED },
       include: { facilities: { include: { facility: true } } },
     });
     if (!property) return null;
@@ -66,6 +79,43 @@ export const propertyService = {
       data: { isActive: false },
     });
   },
+
+  activate(id: string) {
+    return prisma.property.update({
+      where: { id },
+      data: { isActive: true },
+    });
+  },
+
+  /**
+   * Permanent removal from the admin's world. Refused while a contract is still
+   * running — the room behind it has to stay reachable. The property's rooms and
+   * room types go with it, otherwise they would linger in the rooms page with no
+   * property tab left to reach them from.
+   */
+  async softDelete(id: string) {
+    const activeContracts = await prisma.contract.count({
+      where: { status: 'ACTIVE', room: { propertyId: id } },
+    });
+    if (activeContracts > 0) {
+      throw new Error(
+        `Properti ini masih punya ${activeContracts} kontrak aktif. Akhiri kontraknya dulu sebelum menghapus.`,
+      );
+    }
+
+    const deletedAt = new Date();
+    return prisma.$transaction(async (tx) => {
+      await tx.room.updateMany({
+        where: { propertyId: id, ...NOT_DELETED },
+        data: { deletedAt, isActive: false },
+      });
+      await tx.roomType.updateMany({
+        where: { propertyId: id, ...NOT_DELETED },
+        data: { deletedAt, isActive: false },
+      });
+      return tx.property.update({ where: { id }, data: { deletedAt, isActive: false } });
+    });
+  },
 };
 
 export const publicPropertyService = {
@@ -73,10 +123,13 @@ export const publicPropertyService = {
   // of an ACTIVE contract — the same rule the public floor plan uses to paint a
   // room AVAILABLE, so the two can never disagree.
   async summary() {
-    const roomScope = { isActive: true, property: { isActive: true } } as const;
+    const roomScope = {
+      ...recordStatusWhere('active'),
+      property: recordStatusWhere('active'),
+    } as const;
 
     const [propertyCount, roomCount, occupiedRoomCount] = await Promise.all([
-      prisma.property.count({ where: { isActive: true } }),
+      prisma.property.count({ where: recordStatusWhere('active') }),
       prisma.room.count({ where: roomScope }),
       prisma.room.count({
         where: { ...roomScope, contracts: { some: { status: 'ACTIVE' } } },

@@ -8,6 +8,7 @@ import {
   Sparkles,
   Tag,
   Users,
+  UserX,
   FileText,
   Wallet,
   Receipt,
@@ -98,6 +99,12 @@ const SECTIONS: NavSection[] = [
         href: '/admin/tenants',
         label: 'Penyewa',
         icon: Users,
+        roles: ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'],
+      },
+      {
+        href: '/admin/tenants/blacklist',
+        label: 'Blacklist',
+        icon: UserX,
         roles: ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'],
       },
       {
@@ -200,6 +207,23 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+/**
+ * Sebuah item menyala kalau ia rute terdalam yang cocok. `startsWith` polos
+ * tidak cukup sejak `/admin/tenants/blacklist` ada di samping `/admin/tenants`
+ * — keduanya akan menyala, dan penanda "kamu di sini" yang menunjuk dua tempat
+ * lebih buruk daripada tidak ada.
+ */
+function activeHrefFor(pathname: string): string | null {
+  const matches = [DASHBOARD_ITEM, ...SECTIONS.flatMap((section) => section.items)]
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`));
+
+  return matches.reduce<string | null>(
+    (longest, href) => (longest && longest.length >= href.length ? longest : href),
+    null,
+  );
+}
+
 const DEFAULT_SECTIONS: Record<string, boolean> = {
   'master-data': true,
   operasional: true,
@@ -288,6 +312,7 @@ export function AdminSidebar({ role, userName }: { role: string; userName: strin
   })).filter((section) => section.items.length > 0);
 
   const showDashboard = DASHBOARD_ITEM.roles.includes(role);
+  const activeHref = activeHrefFor(pathname);
 
   const renderNavItem = (item: NavItem, active: boolean, rail: boolean) => (
     <Link
@@ -349,7 +374,7 @@ export function AdminSidebar({ role, userName }: { role: string; userName: strin
           rail ? 'space-y-2 px-2' : 'space-y-4 px-3',
         )}
       >
-        {showDashboard && renderNavItem(DASHBOARD_ITEM, pathname === DASHBOARD_ITEM.href, rail)}
+        {showDashboard && renderNavItem(DASHBOARD_ITEM, activeHref === DASHBOARD_ITEM.href, rail)}
 
         {filteredSections.map((section) => {
           const isOpen = rail || openSections[section.id] !== false;
@@ -383,7 +408,7 @@ export function AdminSidebar({ role, userName }: { role: string; userName: strin
                 <div className={cn('overflow-hidden', !isOpen && 'pointer-events-none')}>
                   <div className="space-y-1">
                     {section.items.map((item) =>
-                      renderNavItem(item, pathname.startsWith(item.href), rail),
+                      renderNavItem(item, activeHref === item.href, rail),
                     )}
                   </div>
                 </div>

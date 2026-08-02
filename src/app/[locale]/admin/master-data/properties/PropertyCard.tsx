@@ -1,16 +1,17 @@
 'use client';
 
 import { Clock, DoorClosed, MapPin, Phone, SquareArrowOutUpRight } from 'lucide-react';
-import { useState, useTransition, type ReactNode } from 'react';
-import { toast } from 'sonner';
+import { type ReactNode } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Link } from '@/i18n/navigation';
 import { propertyTypeLabel, type PropertyTypeName } from '@/lib/property';
 
-import { deactivatePropertyAction } from './actions';
+import { RecordActions } from '../RecordActions';
+import {
+  activatePropertyAction,
+  deactivatePropertyAction,
+  deletePropertyAction,
+} from './actions';
 
 const GENDER_LABEL = {
   PUTRA: 'Khusus Putra',
@@ -49,112 +50,81 @@ export function PropertyCard({
   roomCount,
   isActive,
 }: PropertyCardProps) {
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [isPending, startTransition] = useTransition();
-
   const contact = [contactName, whatsappNumber ?? contactPhone].filter(Boolean).join(' · ');
 
-  const handleConfirm = () => {
-    startTransition(async () => {
-      const result = await deactivatePropertyAction(id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      setIsConfirming(false);
-      toast.success(`${name} dinonaktifkan`);
-    });
-  };
-
   return (
-    <>
-      <article className="border-border bg-card hover:border-border-strong flex flex-col rounded-lg border shadow-sm transition-colors">
-        <header className="flex items-start justify-between gap-3 p-5 pb-4">
-          <div className="min-w-0">
-            <h2 className="text-foreground truncate text-base font-semibold">{name}</h2>
-            <p className="text-foreground-subtle mt-1 font-mono text-xs tracking-wide">{code}</p>
-          </div>
-          <Badge variant={isActive ? 'success' : 'outline'} dot>
-            {isActive ? 'Aktif' : 'Nonaktif'}
-          </Badge>
-        </header>
-
-        <div className="flex flex-wrap gap-1.5 px-5 pb-4">
-          <Badge variant="secondary">{propertyTypeLabel(type)}</Badge>
-          <Badge variant="outline">{GENDER_LABEL[genderPolicy]}</Badge>
+    <article className="border-border bg-card hover:border-border-strong flex flex-col rounded-lg border shadow-sm transition-colors">
+      <header className="flex items-start justify-between gap-3 p-5 pb-4">
+        <div className="min-w-0">
+          <h2 className="text-foreground truncate text-base font-semibold">{name}</h2>
+          <p className="text-foreground-subtle mt-1 font-mono text-xs tracking-wide">{code}</p>
         </div>
+        <Badge variant={isActive ? 'success' : 'outline'} dot>
+          {isActive ? 'Aktif' : 'Nonaktif'}
+        </Badge>
+      </header>
 
-        <dl className="border-border flex flex-col gap-2.5 border-t px-5 py-4">
-          <InfoRow icon={<MapPin aria-hidden className="size-4" />} label="Alamat">
-            {address ? (
-              <span className="line-clamp-2">{address}</span>
-            ) : (
-              <span className="text-foreground-subtle italic">Alamat belum diisi</span>
-            )}
-          </InfoRow>
+      <div className="flex flex-wrap gap-1.5 px-5 pb-4">
+        <Badge variant="secondary">{propertyTypeLabel(type)}</Badge>
+        <Badge variant="outline">{GENDER_LABEL[genderPolicy]}</Badge>
+      </div>
 
-          <InfoRow icon={<Phone aria-hidden className="size-4" />} label="Kontak">
-            {contact || <span className="text-foreground-subtle italic">Kontak belum diisi</span>}
-          </InfoRow>
+      <dl className="border-border flex flex-col gap-2.5 border-t px-5 py-4">
+        <InfoRow icon={<MapPin aria-hidden className="size-4" />} label="Alamat">
+          {address ? (
+            <span className="line-clamp-2">{address}</span>
+          ) : (
+            <span className="text-foreground-subtle italic">Alamat belum diisi</span>
+          )}
+        </InfoRow>
 
-          <InfoRow icon={<DoorClosed aria-hidden className="size-4" />} label="Jumlah kamar">
-            <span className="tabular-nums">{roomCount} kamar</span>
-            {curfewTime && (
-              <>
-                <span aria-hidden className="text-foreground-subtle mx-2">
-                  |
-                </span>
-                <Clock aria-hidden className="mr-1 inline size-3.5 align-[-2px]" />
-                <span className="tabular-nums">Jam malam {curfewTime}</span>
-              </>
-            )}
-          </InfoRow>
-        </dl>
+        <InfoRow icon={<Phone aria-hidden className="size-4" />} label="Kontak">
+          {contact || <span className="text-foreground-subtle italic">Kontak belum diisi</span>}
+        </InfoRow>
 
-        <footer className="border-border mt-auto flex items-center justify-between gap-2 border-t px-5 py-3">
-          {mapsUrl ? (
+        <InfoRow icon={<DoorClosed aria-hidden className="size-4" />} label="Jumlah kamar">
+          <span className="tabular-nums">{roomCount} kamar</span>
+          {curfewTime && (
+            <>
+              <span aria-hidden className="text-foreground-subtle mx-2">
+                |
+              </span>
+              <Clock aria-hidden className="mr-1 inline size-3.5 align-[-2px]" />
+              <span className="tabular-nums">Jam malam {curfewTime}</span>
+            </>
+          )}
+        </InfoRow>
+      </dl>
+
+      <div className="mt-auto px-5 pb-3">
+        <RecordActions
+          name={name}
+          isActive={isActive}
+          editHref={`/admin/master-data/properties/${id}`}
+          deactivateDescription={
+            roomCount > 0
+              ? `Properti ini punya ${roomCount} kamar. Kontrak yang sedang berjalan tetap aman, tapi properti tidak bisa dipakai untuk kontrak baru dan hilang dari halaman publik.`
+              : 'Properti tidak bisa dipakai untuk transaksi baru dan hilang dari halaman publik. Bisa diaktifkan lagi lewat filter Nonaktif.'
+          }
+          deleteDescription={`Properti beserta ${roomCount} kamar dan seluruh tipe kamarnya hilang dari semua daftar untuk selamanya. Penghapusan ditolak selama masih ada kontrak yang berjalan.`}
+          onDeactivate={() => deactivatePropertyAction(id)}
+          onActivate={() => activatePropertyAction(id)}
+          onDelete={() => deletePropertyAction(id)}
+        >
+          {mapsUrl && (
             <a
               href={mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground-muted hover:text-primary focus-visible:ring-primary/25 inline-flex items-center gap-1.5 rounded-xs text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="text-foreground-muted hover:text-primary focus-visible:ring-primary/25 mr-auto inline-flex items-center gap-1.5 rounded-xs text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <SquareArrowOutUpRight aria-hidden className="size-3.5" />
               Peta
             </a>
-          ) : (
-            <span />
           )}
-
-          <div className="flex items-center gap-1">
-            <Link href={`/admin/master-data/properties/${id}`}>
-              <Button variant="ghost" size="sm">
-                Edit
-              </Button>
-            </Link>
-            {isActive && (
-              <Button variant="ghost" size="sm" onClick={() => setIsConfirming(true)}>
-                Nonaktifkan
-              </Button>
-            )}
-          </div>
-        </footer>
-      </article>
-
-      <ConfirmDialog
-        open={isConfirming}
-        title={`Nonaktifkan ${name}?`}
-        description={
-          roomCount > 0
-            ? `Properti ini punya ${roomCount} kamar. Kontrak yang sedang berjalan tetap aman, tapi properti tidak bisa dipakai untuk kontrak baru dan hilang dari halaman publik.`
-            : 'Properti tidak bisa dipakai untuk transaksi baru dan hilang dari halaman publik. Bisa diaktifkan lagi lewat halaman edit.'
-        }
-        confirmLabel="Nonaktifkan"
-        isPending={isPending}
-        onConfirm={handleConfirm}
-        onCancel={() => setIsConfirming(false)}
-      />
-    </>
+        </RecordActions>
+      </div>
+    </article>
   );
 }
 

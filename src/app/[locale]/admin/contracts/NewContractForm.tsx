@@ -15,6 +15,7 @@ import { Money } from '@/components/ui/Money';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { blacklistReasonLabel } from '@/lib/blacklist';
 import { cn } from '@/lib/cn';
 import {
   GENDER_OPTIONS,
@@ -38,6 +39,7 @@ interface Tenant {
   phone: string;
   gender: 'LAKI_LAKI' | 'PEREMPUAN' | null;
   isBlacklisted: boolean;
+  blacklistReason: string | null;
   blacklistNote: string | null;
 }
 
@@ -418,10 +420,13 @@ export function NewContractForm({ tenants, rooms, preselectedRoomId }: Props) {
                 {selectedTenant?.isBlacklisted && (
                   <div className="flex flex-col gap-2 rounded-md border border-destructive/30 border-l-4 border-l-destructive bg-destructive-subtle p-4">
                     <p className="text-sm font-semibold text-destructive">
-                      {selectedTenant.fullName} ada di daftar blacklist.
+                      {selectedTenant.fullName} ada di daftar blacklist —{' '}
+                      {blacklistReasonLabel(selectedTenant.blacklistReason).toLowerCase()}.
                     </p>
                     {selectedTenant.blacklistNote && (
-                      <p className="text-xs text-foreground-muted">{selectedTenant.blacklistNote}</p>
+                      <p className="text-xs whitespace-pre-line text-foreground-muted">
+                        {selectedTenant.blacklistNote}
+                      </p>
                     )}
                     <Checkbox
                       checked={blacklistAcknowledged}

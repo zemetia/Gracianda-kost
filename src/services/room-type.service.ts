@@ -3,6 +3,7 @@
 
 import { PRICE_TIER_FIELDS } from '@/lib/billing';
 import { prisma } from '@/lib/prisma';
+import { NOT_DELETED, recordStatusWhere, type RecordStatus } from '@/lib/record-status';
 import type { RoomTypeInput } from '@/lib/validations';
 
 /** Rows for `room_type_prices`, skipping the tiers the admin left blank. */
@@ -15,35 +16,45 @@ function priceTierRows(data: RoomTypeInput) {
 }
 
 export const roomTypeService = {
-  list(propertyId?: string) {
+  /** One status bucket at a time — deactivated types are never mixed in. */
+  list(propertyId?: string, status: RecordStatus = 'active') {
     return prisma.roomType.findMany({
-      where: propertyId ? { propertyId } : undefined,
+      where: { ...recordStatusWhere(status), propertyId: propertyId || undefined },
       include: {
         property: true,
         facilities: { include: { facility: true } },
         prices: true,
-        _count: { select: { rooms: true } },
+        _count: { select: { rooms: { where: NOT_DELETED } } },
       },
       orderBy: { name: 'asc' },
     });
   },
 
+  async counts(propertyId?: string) {
+    const scope = { propertyId: propertyId || undefined };
+    const [active, inactive] = await Promise.all([
+      prisma.roomType.count({ where: { ...scope, ...recordStatusWhere('active') } }),
+      prisma.roomType.count({ where: { ...scope, ...recordStatusWhere('inactive') } }),
+    ]);
+    return { active, inactive };
+  },
+
   listActive(propertyId: string) {
     return prisma.roomType.findMany({
-      where: { propertyId, isActive: true },
+      where: { propertyId, ...recordStatusWhere('active') },
       include: { facilities: true, prices: true },
       orderBy: { name: 'asc' },
     });
   },
 
   getById(id: string) {
-    return prisma.roomType.findUnique({
-      where: { id },
+    return prisma.roomType.findFirst({
+      where: { id, ...NOT_DELETED },
       include: {
         property: true,
         facilities: { include: { facility: true } },
         prices: true,
-        _count: { select: { rooms: true } },
+        _count: { select: { rooms: { where: NOT_DELETED } } },
       },
     });
   },
@@ -102,17 +113,43 @@ export const roomTypeService = {
     });
   },
 
-  // Soft-disable — rooms keep pointing at the type, so its facilities and
-  // photos stay resolvable for units that were created from it.
+  // Parked — rooms keep pointing at the type, so its facilities and photos stay
+  // resolvable for units that were created from it. It just stops being offered
+  // when a new room is added.
   deactivate(id: string) {
     return prisma.roomType.update({ where: { id }, data: { isActive: false } });
+  },
+
+  activate(id: string) {
+    return prisma.roomType.update({ where: { id }, data: { isActive: true } });
+  },
+
+  // Permanent removal. Refused while rooms still inherit from it: their
+  // facilities and photos resolve through this row, and a deleted type would
+  // silently strip them.
+  async softDelete(id: string) {
+    const rooms = await prisma.roomType.findFirst({
+      where: { id },
+      select: { _count: { select: { rooms: { where: NOT_DELETED } } } },
+    });
+    const roomCount = rooms?._count.rooms ?? 0;
+    if (roomCount > 0) {
+      throw new Error(
+        `${roomCount} kamar masih memakai tipe ini. Pindahkan kamarnya ke tipe lain dulu sebelum menghapus.`,
+      );
+    }
+
+    return prisma.roomType.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
+    });
   },
 
   // Defaults used to prefill the room form when an admin picks a type.
   // Never read during billing — Room.price stays authoritative there.
   async getFormDefaults(propertyId: string) {
     const types = await prisma.roomType.findMany({
-      where: { propertyId, isActive: true },
+      where: { propertyId, ...recordStatusWhere('active') },
       include: { facilities: true, prices: true },
       orderBy: { name: 'asc' },
     });

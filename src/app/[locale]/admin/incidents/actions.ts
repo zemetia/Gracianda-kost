@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireRole } from '@/lib/auth';
+import { parsePersonRef } from '@/lib/incident';
 import { incidentSchema, incidentStatusSchema } from '@/lib/validations';
 import { incidentService } from '@/services/incident.service';
 import { auditService } from '@/services/audit.service';
@@ -15,12 +16,36 @@ export interface IncidentFormState {
   fieldErrors?: Record<string, string[]>;
 }
 
+/**
+ * Rebuilds the person rows by zipping the repeated field names. Safe because
+ * every row renders every input — Select and Combobox always emit their hidden
+ * input, so a blank picker still holds its slot and the indexes never shift.
+ */
+function readPeople(formData: FormData) {
+  const names = formData.getAll('personName').map(String);
+  const roles = formData.getAll('personRole').map(String);
+  const refs = formData.getAll('personRef').map(String);
+  const phones = formData.getAll('personPhone').map(String);
+  const notes = formData.getAll('personNotes').map(String);
+
+  return names
+    .map((name, index) => ({
+      name: name.trim(),
+      role: roles[index] || 'TERLIBAT',
+      ...parsePersonRef(refs[index]),
+      phone: phones[index] ?? '',
+      notes: notes[index] ?? '',
+    }))
+    .filter((person) => person.name.length > 0);
+}
+
 export async function createIncidentAction(
   _prevState: IncidentFormState,
   formData: FormData,
 ): Promise<IncidentFormState> {
   const session = await requireRole(CAN_CREATE);
   const parsed = incidentSchema.safeParse({
+    people: readPeople(formData),
     category: formData.get('category'),
     status: 'OPEN',
     date: formData.get('date'),

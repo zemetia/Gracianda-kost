@@ -13,6 +13,15 @@ enum IncidentStatus {
   RESOLVED
 }
 
+// Peran seseorang dalam satu insiden. Satu insiden bisa punya banyak orang
+// dengan peran berbeda — yang melapor belum tentu yang terlibat.
+enum IncidentPersonRole {
+  PELAPOR
+  TERLIBAT
+  SAKSI
+  TERDAMPAK
+}
+
 model Incident {
   id         String           @id @default(cuid())
   category   IncidentCategory
@@ -29,8 +38,40 @@ model Incident {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  people IncidentPerson[]
+
   @@index([roomId, date])
   @@index([status])
   @@index([propertyId])
   @@map("incidents")
+}
+
+// Orang yang tercatat dalam satu insiden. `name` selalu diisi — snapshot,
+// sama doktrinnya dengan `Contract.rentPrice`: laporan lama harus tetap
+// terbaca walau penyewanya sudah keluar atau namanya diperbaiki, dan orang
+// luar (tamu, kurir, tetangga) tidak punya baris Tenant untuk ditunjuk.
+model IncidentPerson {
+  id         String             @id @default(cuid())
+  incidentId String
+  incident   Incident           @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  role       IncidentPersonRole @default(TERLIBAT)
+
+  // Diisi kalau orangnya penghuni terdaftar — inilah yang membuat riwayat
+  // insiden per orang bisa dikumpulkan di halaman penyewa.
+  tenantId   String?
+  tenant     Tenant?           @relation(fields: [tenantId], references: [id])
+  // SetNull, bukan restrict: baris occupant ikut terhapus kalau kontraknya
+  // dihapus, dan laporan insiden tidak boleh ikut hilang — `name` sudah
+  // menyimpan siapa orangnya.
+  occupantId String?
+  occupant   ContractOccupant? @relation(fields: [occupantId], references: [id], onDelete: SetNull)
+
+  name  String
+  phone String?
+  notes String?
+
+  @@index([incidentId])
+  @@index([tenantId])
+  @@index([occupantId])
+  @@map("incident_people")
 }

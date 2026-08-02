@@ -114,3 +114,45 @@ export async function deactivatePropertyAction(id: string): Promise<{ error?: st
   revalidatePath('/admin/master-data/properties');
   return {};
 }
+
+export async function activatePropertyAction(id: string): Promise<{ error?: string }> {
+  const session = await requireRole(CAN_MANAGE);
+
+  try {
+    await propertyService.activate(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal mengaktifkan properti' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'UPDATE',
+    entityType: 'Property',
+    entityId: id,
+    after: { isActive: true },
+  });
+  revalidatePath('/admin/master-data/properties');
+  return {};
+}
+
+export async function deletePropertyAction(id: string): Promise<{ error?: string }> {
+  const session = await requireRole(CAN_MANAGE);
+
+  try {
+    await propertyService.softDelete(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Gagal menghapus properti' };
+  }
+
+  await auditService.log({
+    userId: session.user.id,
+    action: 'DELETE',
+    entityType: 'Property',
+    entityId: id,
+    after: { deletedAt: new Date().toISOString() },
+  });
+  // Rooms and room types went with it, and the property switcher lives in the
+  // admin shell — the whole admin tree is stale.
+  revalidatePath('/admin', 'layout');
+  return {};
+}

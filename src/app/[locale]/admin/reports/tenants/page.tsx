@@ -62,6 +62,7 @@ export default async function TenantsReportPage({ searchParams }: Props) {
         <MetricBlock
           label="Blacklist"
           value={formatNumber(report.blacklisted)}
+          href="/admin/tenants/blacklist"
           tone={report.blacklisted > 0 ? 'destructive' : 'muted'}
         />
       </MetricRow>

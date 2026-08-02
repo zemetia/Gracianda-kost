@@ -36,6 +36,7 @@ export default async function NewContractPage({ searchParams }: Props) {
           phone: t.phone,
           gender: t.gender,
           isBlacklisted: t.isBlacklisted,
+          blacklistReason: t.blacklistReason,
           blacklistNote: t.blacklistNote,
         }))}
         rooms={rooms.map((r) => ({

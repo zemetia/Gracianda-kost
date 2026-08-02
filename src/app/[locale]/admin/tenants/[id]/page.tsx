@@ -5,12 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { MetricInline } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
+import {
+  INCIDENT_STATUS_VARIANT,
+  incidentCategoryLabel,
+  incidentPersonRoleLabel,
+  incidentPlaceLabel,
+  incidentStatusLabel,
+} from '@/lib/incident';
+import { canAccess } from '@/lib/auth';
+import { blacklistReasonLabel, blacklistReasonTone } from '@/lib/blacklist';
 import { genderLabel, maritalStatusLabel, occupantCountLabel } from '@/lib/tenant';
 import { formatDate } from '@/lib/utils';
 import { tenantService } from '@/services/tenant.service';
 import { attachmentService } from '@/services/attachment.service';
+import { incidentService } from '@/services/incident.service';
 
-import { BlacklistForm } from './BlacklistForm';
+import { BlacklistPanel } from './BlacklistPanel';
 import { KtpUpload } from './KtpUpload';
 
 interface Props {
@@ -25,9 +35,11 @@ const CONTRACT_STATUS_LABEL: Record<string, string> = {
 
 export default async function TenantDetailPage({ params }: Props) {
   const { id } = await params;
-  const [tenant, ktpDocs] = await Promise.all([
+  const [tenant, ktpDocs, incidents, canManage] = await Promise.all([
     tenantService.getById(id),
     attachmentService.listFor('TENANT', id),
+    incidentService.listForTenant(id),
+    canAccess(['SUPER_ADMIN', 'OPERASIONAL']),
   ]);
 
   if (!tenant) notFound();
@@ -44,7 +56,11 @@ export default async function TenantDetailPage({ params }: Props) {
             {tenant.email ? ` · ${tenant.email}` : ''}
           </Typography>
         </div>
-        {tenant.isBlacklisted && <Badge variant="destructive">Blacklist</Badge>}
+        {tenant.isBlacklisted && (
+          <Badge variant={blacklistReasonTone(tenant.blacklistReason)}>
+            Blacklist · {blacklistReasonLabel(tenant.blacklistReason)}
+          </Badge>
+        )}
       </div>
 
       <section>
@@ -102,15 +118,64 @@ export default async function TenantDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
+      {/* Read before deciding on a blacklist or a renewal — that is why it sits
+          above the blacklist card, not at the bottom of the page. */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between gap-4">
+          <CardTitle>Riwayat Insiden</CardTitle>
+          {incidents.length > 0 && (
+            <Link
+              href={`/admin/incidents?tenantId=${id}`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Filter di daftar insiden
+            </Link>
+          )}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {incidents.map((incident) => (
+            <Link
+              key={incident.id}
+              href={`/admin/incidents/${incident.id}`}
+              className="flex items-center justify-between gap-4 rounded-md border border-border p-3 hover:bg-surface-raised"
+            >
+              <div>
+                <Typography variant="large" as="span">
+                  {incidentCategoryLabel(incident.category)}
+                </Typography>
+                <Typography variant="muted">
+                  {formatDate(incident.date, 'id-ID')} · {incident.property.name} ·{' '}
+                  {incidentPlaceLabel(incident)}
+                  {incident.people[0]
+                    ? ` · sebagai ${incidentPersonRoleLabel(incident.people[0].role).toLowerCase()}`
+                    : ''}
+                </Typography>
+              </div>
+              <Badge variant={INCIDENT_STATUS_VARIANT[incident.status]}>
+                {incidentStatusLabel(incident.status)}
+              </Badge>
+            </Link>
+          ))}
+          {incidents.length === 0 && (
+            <Typography variant="muted">Belum pernah tercatat dalam insiden.</Typography>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Blacklist</CardTitle>
         </CardHeader>
         <CardContent>
-          <BlacklistForm
+          <BlacklistPanel
             tenantId={id}
+            fullName={tenant.fullName}
             isBlacklisted={tenant.isBlacklisted}
-            blacklistNote={tenant.blacklistNote}
+            reason={tenant.blacklistReason}
+            note={tenant.blacklistNote}
+            blacklistedAt={tenant.blacklistedAt?.toISOString() ?? null}
+            blacklistedByName={tenant.blacklistedBy?.name ?? tenant.blacklistedBy?.email ?? null}
+            canManage={canManage}
           />
         </CardContent>
       </Card>

@@ -2,7 +2,15 @@ import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/Badge';
 import { Typography } from '@/components/ui/Typography';
+import { Link } from '@/i18n/navigation';
 import { getSession } from '@/lib/auth';
+import {
+  INCIDENT_STATUS_VARIANT,
+  incidentCategoryLabel,
+  incidentPersonRoleLabel,
+  incidentPlaceLabel,
+  incidentStatusLabel,
+} from '@/lib/incident';
 import { formatDate } from '@/lib/utils';
 import { incidentService } from '@/services/incident.service';
 
@@ -11,27 +19,6 @@ import { IncidentStatusForm } from './IncidentStatusForm';
 interface Props {
   params: Promise<{ id: string }>;
 }
-
-const CATEGORY_LABEL: Record<string, string> = {
-  PELANGGARAN_ATURAN: 'Pelanggaran Aturan',
-  GANGGUAN: 'Gangguan',
-  KERUSAKAN: 'Kerusakan',
-  KEHILANGAN: 'Kehilangan',
-  KELUHAN_PENGHUNI: 'Keluhan Penghuni',
-  LAPORAN_SECURITY: 'Laporan Security',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  OPEN: 'Terbuka',
-  IN_PROGRESS: 'Diproses',
-  RESOLVED: 'Selesai',
-};
-
-const STATUS_VARIANT: Record<string, 'destructive' | 'warning' | 'success'> = {
-  OPEN: 'destructive',
-  IN_PROGRESS: 'warning',
-  RESOLVED: 'success',
-};
 
 export default async function IncidentDetailPage({ params }: Props) {
   const { id } = await params;
@@ -45,14 +32,16 @@ export default async function IncidentDetailPage({ params }: Props) {
       <div className="flex items-start justify-between">
         <div>
           <Typography variant="h2" className="mb-1">
-            {CATEGORY_LABEL[incident.category]}
+            {incidentCategoryLabel(incident.category)}
           </Typography>
           <Typography variant="muted">
-            {formatDate(incident.date, 'id-ID')} ·{' '}
-            {incident.property.name} · {incident.room ? `Unit ${incident.room.number} ${incident.room.floor ? `(${incident.room.floor.name})` : ''}` : incident.location ?? 'Seluruh Properti'}
+            {formatDate(incident.date, 'id-ID')} · {incident.property.name} ·{' '}
+            {incidentPlaceLabel(incident)}
           </Typography>
         </div>
-        <Badge variant={STATUS_VARIANT[incident.status]}>{STATUS_LABEL[incident.status]}</Badge>
+        <Badge variant={INCIDENT_STATUS_VARIANT[incident.status]}>
+          {incidentStatusLabel(incident.status)}
+        </Badge>
       </div>
 
       <section>
@@ -62,6 +51,40 @@ export default async function IncidentDetailPage({ params }: Props) {
         <Typography variant="p" className="mt-3 whitespace-pre-line">
           {incident.description}
         </Typography>
+      </section>
+
+      <section>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+          Orang Terkait
+        </h3>
+        <div className="mt-3 flex flex-col gap-2">
+          {incident.people.map((person) => (
+            <div
+              key={person.id}
+              className="flex items-start justify-between gap-4 rounded-md border border-border p-3"
+            >
+              <div>
+                <Typography variant="large" as="span">
+                  {person.tenantId ? (
+                    <Link href={`/admin/tenants/${person.tenantId}`} className="hover:underline">
+                      {person.name}
+                    </Link>
+                  ) : (
+                    person.name
+                  )}
+                </Typography>
+                <Typography variant="muted">
+                  {[person.phone, person.notes].filter(Boolean).join(' · ') ||
+                    (person.tenantId || person.occupantId ? 'Penghuni terdaftar' : 'Bukan penghuni')}
+                </Typography>
+              </div>
+              <Badge variant="outline">{incidentPersonRoleLabel(person.role)}</Badge>
+            </div>
+          ))}
+          {incident.people.length === 0 && (
+            <Typography variant="muted">Tidak ada orang yang dicatat pada laporan ini.</Typography>
+          )}
+        </div>
       </section>
 
       {canManage && (
