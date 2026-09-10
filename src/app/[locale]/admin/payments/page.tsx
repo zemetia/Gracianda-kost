@@ -27,6 +27,7 @@ import {
 
 import { GenerateInvoicesForm } from './GenerateInvoicesForm';
 import { MarkPaidButton } from './MarkPaidButton';
+import { PaymentStatusBar } from './PaymentStatusBar';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { SendWaButton } from './SendWaButton';
 
@@ -120,6 +121,8 @@ export default async function PaymentsPage({ searchParams }: Props) {
         </div>
         {canManage && <GenerateInvoicesForm />}
       </div>
+
+      <PaymentStatusBar payments={payments} />
 
       {/* Bucket tabs: how many, and how much money is still out there.
           Hairline-separated columns — the active one is marked by type, not a box. */}

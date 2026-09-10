@@ -36,6 +36,16 @@ function formatDecimal(value: number): string {
   return value.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+const MONTH_SHORT_ID = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+];
+
+/** 1-indexed month → 3-letter Indonesian abbreviation, for chart axis labels. */
+export function monthShortId(month: number): string {
+  return MONTH_SHORT_ID[month - 1] ?? '';
+}
+
 /** Room/room type dimensions as "3 m x 4 m" — never a bare total sqm. Null when either side is missing. */
 export function formatRoomSize(lengthM: number | null, widthM: number | null): string | null {
   if (!lengthM || !widthM) return null;

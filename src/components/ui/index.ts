@@ -21,4 +21,5 @@ export * from './Select';
 export * from './Sonner';
 export * from './Table';
 export * from './Textarea';
+export * from './TrendBarChart';
 export * from './Typography';

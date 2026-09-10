@@ -12,15 +12,17 @@ import {
 } from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
+import { getPropertyScope } from '@/lib/property-scope';
 import { formatNumber } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 
 import { Forbidden } from '../../Forbidden';
 import { ReportFilterBar } from '../ReportFilterBar';
+import { CashReconciliationCard } from './CashReconciliationCard';
 
 interface Props {
-  searchParams: Promise<{ from?: string; to?: string; floorId?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; floorId?: string; propertyId?: string }>;
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -31,15 +33,17 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default async function CashReportPage({ searchParams }: Props) {
   if (!(await canAccess(['SUPER_ADMIN', 'KEUANGAN']))) return <Forbidden />;
-  const { from, to, floorId } = await searchParams;
+  const { from, to, floorId, propertyId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
 
   const [report, floors] = await Promise.all([
     reportService.cash({
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      propertyId: scopedPropertyId,
       floorId: floorId || undefined,
     }),
-    roomService.listFloors(),
+    roomService.listFloors(scopedPropertyId),
   ]);
 
   return (
@@ -58,6 +62,12 @@ export default async function CashReportPage({ searchParams }: Props) {
       <MetricRow>
         <MetricBlock label="Total Kas Masuk" value={formatNumber(report.totalReceived)} prefix="Rp" size="hero" />
       </MetricRow>
+
+      <CashReconciliationCard
+        reconciliation={report.reconciliation}
+        totalReceived={report.totalReceived}
+        totalCount={report.totalCount}
+      />
 
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-foreground">Breakdown per Metode</h3>

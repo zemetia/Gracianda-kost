@@ -1,6 +1,19 @@
+/** Normalizes phone numbers for WhatsApp wa.me links, automatically prefixing Indonesian 08/8 with 62. */
+export function normalizePhone(phone: string): string {
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) {
+    digits = '62' + digits.slice(1);
+  } else if (digits.startsWith('620')) {
+    digits = '62' + digits.slice(3);
+  } else if (digits.length >= 8 && digits.startsWith('8')) {
+    digits = '62' + digits;
+  }
+  return digits;
+}
+
 /** Builds a `wa.me` click-to-chat link with a pre-filled message. No WhatsApp Business API needed. */
 export function buildWaLink(phone: string, message: string): string {
-  const digits = phone.replace(/\D/g, '');
+  const digits = normalizePhone(phone);
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 

@@ -7,6 +7,9 @@ import { formatDate, formatNumber, formatPercent, formatRupiah, formatRupiahShor
 import { dashboardService } from '@/services/dashboard.service';
 
 import { ActionQueue } from './ActionQueue';
+import { CostBreakdownCard } from './CostBreakdownCard';
+import { HeadcountChart } from './HeadcountChart';
+import { QuarterlyFinancialCard } from './QuarterlyFinancialCard';
 import { RevenueChart } from './RevenueChart';
 
 // These mirror the layout guards of the pages each metric links to
@@ -43,15 +46,29 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const selectedPropertyId = await getPropertyScope(propertyId);
 
   // Aggregates are cheap enough to fetch unconditionally — only rendering is role-gated.
-  const [roomStats, revenue, maintenance, incidents, revenueTrend, actionQueue] =
-    await Promise.all([
-      dashboardService.getRoomStats(selectedPropertyId),
-      dashboardService.getRevenueThisMonth(selectedPropertyId),
-      dashboardService.getMaintenanceThisMonth(selectedPropertyId),
-      dashboardService.getIncidentsThisMonth(selectedPropertyId),
-      dashboardService.getRevenueTrend(6, selectedPropertyId),
-      dashboardService.getActionQueue(selectedPropertyId),
-    ]);
+  const [
+    roomStats,
+    revenue,
+    maintenance,
+    incidents,
+    revenueTrend,
+    actionQueue,
+    headcountStats,
+    headcountTrend,
+    costBreakdown,
+    quarterlySummary,
+  ] = await Promise.all([
+    dashboardService.getRoomStats(selectedPropertyId),
+    dashboardService.getRevenueThisMonth(selectedPropertyId),
+    dashboardService.getMaintenanceThisMonth(selectedPropertyId),
+    dashboardService.getIncidentsThisMonth(selectedPropertyId),
+    dashboardService.getRevenueTrend(6, selectedPropertyId),
+    dashboardService.getActionQueue(selectedPropertyId),
+    dashboardService.getHeadcountStats(selectedPropertyId),
+    dashboardService.getHeadcountTrend(6, selectedPropertyId),
+    dashboardService.getCostBreakdown(selectedPropertyId),
+    dashboardService.getQuarterlyFinancialSummary(selectedPropertyId),
+  ]);
 
   const scope = selectedPropertyId ? `&propertyId=${selectedPropertyId}` : '';
   const roomScope = selectedPropertyId ? `?propertyId=${selectedPropertyId}` : '';
@@ -75,6 +92,21 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const trendTotal = revenueTrend.reduce((sum, point) => sum + point.total, 0);
 
   const occupancy = roomStats.total > 0 ? (roomStats.occupied / roomStats.total) * 100 : null;
+
+  // Headcount = tenant + occupants per active contract, never assumed from
+  // room count — see dashboardService.getHeadcountStats.
+  const headcount = headcountStats.current;
+  const previousHeadcount = headcountStats.previous;
+  const capacityTotal = headcount.roomsTotal * 2;
+  const previousCapacityTotal = previousHeadcount.roomsTotal * 2;
+  const capacityOccupancy = capacityTotal > 0 ? (headcount.totalPeople / capacityTotal) * 100 : null;
+  const previousCapacityOccupancy =
+    previousCapacityTotal > 0 ? (previousHeadcount.totalPeople / previousCapacityTotal) * 100 : null;
+  const headcountDelta = delta(headcount.totalPeople, previousHeadcount.totalPeople);
+  const capacityOccupancyDelta =
+    capacityOccupancy !== null && previousCapacityOccupancy !== null
+      ? delta(capacityOccupancy, previousCapacityOccupancy)
+      : null;
 
   return (
     <div className="flex flex-col gap-12">
@@ -154,6 +186,52 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         />
       </MetricRow>
 
+      {/* Penyewa Per Bulan — headcount total (penyewa + penghuni tambahan),
+          bukan asumsi 1 kamar = 1 orang */}
+      <section className="-mt-px border-y border-border py-8">
+        <MetricBlock
+          label="Total Penyewa"
+          value={formatNumber(headcount.totalPeople)}
+          suffix="Orang"
+          size="hero"
+          delta={headcountDelta}
+          period="vs bulan lalu"
+          meta={`Dari kapasitas maksimal ${formatNumber(capacityTotal)} Orang`}
+          href={`/admin/master-data/rooms?occupancy=occupied${scope}`}
+        />
+      </section>
+
+      <MetricRow columns={2} stacked>
+        <MetricBlock
+          label="Kamar Terisi"
+          value={`${formatNumber(headcount.roomsOccupied)}/${formatNumber(headcount.roomsTotal)}`}
+          meta={`${formatNumber(headcount.doubleOccupancy)} kamar isi 2 orang, ${formatNumber(headcount.singleOccupancy)} kamar isi 1 orang`}
+          href={`/admin/master-data/rooms?occupancy=occupied${scope}`}
+        />
+        <MetricBlock
+          label="Okupansi Kapasitas"
+          value={capacityOccupancy === null ? '—' : formatPercent(capacityOccupancy)}
+          tone={capacityOccupancy === null ? 'muted' : 'default'}
+          delta={capacityOccupancyDelta}
+          period="vs bulan lalu"
+          meta={`${formatNumber(headcount.totalPeople)} dari ${formatNumber(capacityTotal)} kapasitas`}
+        />
+      </MetricRow>
+
+      {/* Tren penyewa — chart mendukung angka, tidak menggantikannya */}
+      <section className="flex flex-col gap-6">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+            Tren Penyewa · 6 Bulan
+          </p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+            {formatNumber(headcount.totalPeople)}
+            <span className="ml-1 text-lg font-normal text-foreground-muted">Orang</span>
+          </p>
+        </div>
+        <HeadcountChart data={headcountTrend} />
+      </section>
+
       {/* Keuangan & operasional */}
       {(showFinance || showMaintenance || showIncidents) && (
         <MetricRow columns={3} stacked>
@@ -221,6 +299,20 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {/* Komposisi Biaya Operasional */}
+      {showFinance && (
+        <section>
+          <CostBreakdownCard data={costBreakdown} />
+        </section>
+      )}
+
+      {/* Ringkasan Finansial per Kuartal (Slide 1a) */}
+      {showFinance && (
+        <section>
+          <QuarterlyFinancialCard summary={quarterlySummary} />
         </section>
       )}
 

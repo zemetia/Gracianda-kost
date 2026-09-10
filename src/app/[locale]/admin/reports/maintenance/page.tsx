@@ -13,31 +13,39 @@ import {
 } from '@/components/ui/Table';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
+import { getPropertyScope } from '@/lib/property-scope';
 import { formatNumber, formatRupiah } from '@/lib/utils';
+import { dashboardService } from '@/services/dashboard.service';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 import type { MaintenanceScope } from '@/generated/prisma/client';
 
 import { Forbidden } from '../../Forbidden';
 import { ReportFilterBar } from '../ReportFilterBar';
+import { AnnualOpsFrequencyCard } from './AnnualOpsFrequencyCard';
+import { QuarterlyMaintenanceCard } from './QuarterlyMaintenanceCard';
 
 interface Props {
-  searchParams: Promise<{ from?: string; to?: string; floorId?: string; scope?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; floorId?: string; scope?: string; propertyId?: string }>;
 }
 
 export default async function MaintenanceReportPage({ searchParams }: Props) {
   if (!(await canAccess(['SUPER_ADMIN', 'OPERASIONAL']))) return <Forbidden />;
-  const { from, to, floorId, scope } = await searchParams;
+  const { from, to, floorId, scope, propertyId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
   const scopeValue = scope === 'ROOM' || scope === 'BUILDING' ? (scope as MaintenanceScope) : undefined;
 
-  const [report, floors] = await Promise.all([
+  const targetYear = from ? new Date(from).getFullYear() : new Date().getFullYear();
+  const [report, floors, yearlyOps] = await Promise.all([
     reportService.maintenance({
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      propertyId: scopedPropertyId,
       floorId: floorId || undefined,
       scope: scopeValue,
     }),
-    roomService.listFloors(),
+    roomService.listFloors(scopedPropertyId),
+    dashboardService.getYearlyOperationalFrequency(scopedPropertyId, targetYear),
   ]);
 
   const averageCost = report.count > 0 ? report.totalCost / report.count : null;
@@ -86,6 +94,10 @@ export default async function MaintenanceReportPage({ searchParams }: Props) {
           tone={report.count > 0 ? 'default' : 'muted'}
         />
       </MetricRow>
+
+      <QuarterlyMaintenanceCard data={report.quarterlyByRoom} />
+
+      <AnnualOpsFrequencyCard data={yearlyOps} />
 
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-foreground">Breakdown per Kamar/Gedung</h3>

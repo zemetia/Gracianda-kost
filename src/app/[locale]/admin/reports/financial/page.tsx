@@ -13,28 +13,35 @@ import {
 import { Typography } from '@/components/ui/Typography';
 import { Link } from '@/i18n/navigation';
 import { canAccess } from '@/lib/auth';
+import { getPropertyScope } from '@/lib/property-scope';
 import { formatNumber, formatPercent, formatRupiah } from '@/lib/utils';
+import { dashboardService } from '@/services/dashboard.service';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 
 import { Forbidden } from '../../Forbidden';
 import { ReportFilterBar } from '../ReportFilterBar';
+import { PnLStatementCard } from './PnLStatementCard';
+import { RoomYieldOutliersCard } from './RoomYieldOutliersCard';
 
 interface Props {
-  searchParams: Promise<{ from?: string; to?: string; floorId?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; floorId?: string; propertyId?: string }>;
 }
 
 export default async function FinancialReportPage({ searchParams }: Props) {
   if (!(await canAccess(['SUPER_ADMIN', 'KEUANGAN']))) return <Forbidden />;
-  const { from, to, floorId } = await searchParams;
+  const { from, to, floorId, propertyId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
 
-  const [report, floors] = await Promise.all([
+  const [report, floors, outliers] = await Promise.all([
     reportService.financial({
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      propertyId: scopedPropertyId,
       floorId: floorId || undefined,
     }),
-    roomService.listFloors(),
+    roomService.listFloors(scopedPropertyId),
+    dashboardService.getRoomYieldOutliers(scopedPropertyId),
   ]);
 
   const margin = report.totalRevenue > 0 ? (report.profit / report.totalRevenue) * 100 : null;
@@ -74,6 +81,18 @@ export default async function FinancialReportPage({ searchParams }: Props) {
           meta={margin === null ? 'Belum ada pendapatan' : `Margin ${formatPercent(margin)}`}
         />
       </MetricRow>
+
+      <PnLStatementCard
+        totalRevenue={report.totalRevenue}
+        maintenanceCost={report.maintenanceCost}
+        expenseCost={report.expenseCost}
+        totalCost={report.totalCost}
+        profit={report.profit}
+        margin={margin}
+        expenseByCategory={report.expenseByCategory}
+      />
+
+      <RoomYieldOutliersCard outliers={outliers} />
 
       <section className="flex flex-col gap-4">
         <div>

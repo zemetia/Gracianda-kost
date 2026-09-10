@@ -4,11 +4,14 @@
 import { monthRange, periodsInRange } from '@/lib/billing';
 import { electricityCharge, electricityModeLabel, isMetered } from '@/lib/electricity';
 import { prisma } from '@/lib/prisma';
-import type { Payment } from '@/generated/prisma/client';
 import type { AddPartialPaymentInput, RecordElectricityInput } from '@/lib/validations';
 import { settingService } from '@/services/setting.service';
 
-export type PaymentStatus = 'PENDING' | 'DUE' | 'OVERDUE' | 'PAID';
+export * from '@/lib/payment-status';
+import {
+  getPaymentStatusBreakdown,
+  type PaymentStatusBreakdown,
+} from '@/lib/payment-status';
 
 export interface PaymentListFilter {
   propertyId?: string;
@@ -18,53 +21,29 @@ export interface PaymentListFilter {
   q?: string;
 }
 
-function stripTime(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-}
-
-/**
- * Pure status derivation — never stored, so a missed cron run can't leave a
- * payment showing a stale status. `today` is a parameter (not `new Date()`
- * internally) so this stays trivially testable.
- */
-export function getPaymentStatus(
-  payment: Pick<Payment, 'amountDue' | 'amountPaid' | 'dueDate'>,
-  today: Date = new Date(),
-): PaymentStatus {
-  const amountDue = Number(payment.amountDue);
-  const amountPaid = Number(payment.amountPaid);
-  if (amountPaid >= amountDue) return 'PAID';
-
-  const due = stripTime(payment.dueDate);
-  const now = stripTime(today);
-  if (now < due) return 'PENDING';
-  if (now === due) return 'DUE';
-  return 'OVERDUE';
-}
-
-/**
- * Coarser grouping used by the payments board and the dashboard action queue.
- * Defined once here so "jatuh tempo ≤3 hari" means the same thing in both.
- */
-export type PaymentBucket = 'OVERDUE' | 'DUE_SOON' | 'UPCOMING' | 'PAID';
-
-export const DUE_SOON_DAYS = 3;
-
-const MS_PER_DAY = 86_400_000;
-
-export function getPaymentBucket(
-  payment: Pick<Payment, 'amountDue' | 'amountPaid' | 'dueDate'>,
-  today: Date = new Date(),
-): PaymentBucket {
-  const status = getPaymentStatus(payment, today);
-  if (status === 'PAID') return 'PAID';
-  if (status === 'OVERDUE') return 'OVERDUE';
-
-  const daysUntilDue = (stripTime(payment.dueDate) - stripTime(today)) / MS_PER_DAY;
-  return daysUntilDue <= DUE_SOON_DAYS ? 'DUE_SOON' : 'UPCOMING';
-}
+export type PaymentListItem = Awaited<ReturnType<typeof paymentService.list>>[number];
 
 export const paymentService = {
+  async getPaymentStatusBreakdown(
+    propertyId?: string,
+    month = new Date().getMonth() + 1,
+    year = new Date().getFullYear(),
+    today: Date = new Date(),
+  ): Promise<PaymentStatusBreakdown> {
+    const payments = await prisma.payment.findMany({
+      where: {
+        periodMonth: month,
+        periodYear: year,
+        contract: propertyId ? { room: { propertyId } } : undefined,
+      },
+      select: {
+        amountDue: true,
+        amountPaid: true,
+        dueDate: true,
+      },
+    });
+    return getPaymentStatusBreakdown(payments, today);
+  },
   list(filter: PaymentListFilter = {}) {
     const { propertyId, month, year, q } = filter;
     return prisma.payment.findMany({

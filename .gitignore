@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 /node_modules
 /.pnp
 .pnp.js
@@ -49,3 +49,7 @@ Thumbs.db
 .vercel
 .env*
 !.env.example
+
+# Python
+__pycache__/
+*.py[cod]

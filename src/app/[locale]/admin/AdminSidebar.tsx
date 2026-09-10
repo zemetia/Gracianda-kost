@@ -27,6 +27,7 @@ import {
   Building,
   Landmark,
   CreditCard,
+  Calendar,
 } from 'lucide-react';
 
 import { Link, usePathname } from '@/i18n/navigation';
@@ -136,6 +137,12 @@ const SECTIONS: NavSection[] = [
         label: 'Insiden',
         icon: ShieldAlert,
         roles: ['SUPER_ADMIN', 'SECURITY', 'OPERASIONAL'],
+      },
+      {
+        href: '/admin/schedule',
+        label: 'Jadwal Operasional',
+        icon: Calendar,
+        roles: ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'],
       },
     ],
   },

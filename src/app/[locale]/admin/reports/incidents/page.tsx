@@ -1,15 +1,17 @@
 import { MetricBlock, MetricInline } from '@/components/ui/Metric';
 import { Typography } from '@/components/ui/Typography';
 import { canAccess } from '@/lib/auth';
+import { getPropertyScope } from '@/lib/property-scope';
 import { formatNumber, formatPercent } from '@/lib/utils';
 import { reportService } from '@/services/report.service';
 import { roomService } from '@/services/room.service';
 
 import { Forbidden } from '../../Forbidden';
 import { ReportFilterBar } from '../ReportFilterBar';
+import { IncidentRiskChart } from './IncidentRiskChart';
 
 interface Props {
-  searchParams: Promise<{ from?: string; to?: string; floorId?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; floorId?: string; propertyId?: string }>;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -29,15 +31,17 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function IncidentsReportPage({ searchParams }: Props) {
   if (!(await canAccess(['SUPER_ADMIN', 'SECURITY']))) return <Forbidden />;
-  const { from, to, floorId } = await searchParams;
+  const { from, to, floorId, propertyId } = await searchParams;
+  const scopedPropertyId = await getPropertyScope(propertyId);
 
   const [report, floors] = await Promise.all([
     reportService.incidents({
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      propertyId: scopedPropertyId,
       floorId: floorId || undefined,
     }),
-    roomService.listFloors(),
+    roomService.listFloors(scopedPropertyId),
   ]);
 
   const share = (count: number) => (report.total > 0 ? formatPercent((count / report.total) * 100) : '—');
@@ -65,6 +69,12 @@ export default async function IncidentsReportPage({ searchParams }: Props) {
           meta={report.total === 0 ? 'Tidak ada insiden pada periode ini' : undefined}
         />
       </section>
+
+      <IncidentRiskChart
+        stats={report.categoryStats}
+        total={report.total}
+        avgResolutionHoursOverall={report.avgResolutionHoursOverall}
+      />
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
         <section>

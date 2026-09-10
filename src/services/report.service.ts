@@ -187,8 +187,47 @@ export const reportService = {
       byMethod.set(key, entry);
     }
 
+    const totalReceived = payments.reduce((sum, p) => sum + p.amountPaid.toNumber(), 0);
+    const totalCount = payments.length;
+
+    let transferTotal = 0;
+    let transferCount = 0;
+    let cashTotal = 0;
+    let cashCount = 0;
+
+    for (const p of payments) {
+      const amt = p.amountPaid.toNumber();
+      if (p.paymentMethod?.type === 'CASH') {
+        cashTotal += amt;
+        cashCount += 1;
+      } else {
+        transferTotal += amt;
+        transferCount += 1;
+      }
+    }
+
+    const transferPercentAmount = totalReceived > 0 ? (transferTotal / totalReceived) * 100 : 0;
+    const cashPercentAmount = totalReceived > 0 ? (cashTotal / totalReceived) * 100 : 0;
+    const transferPercentCount = totalCount > 0 ? (transferCount / totalCount) * 100 : 0;
+    const cashPercentCount = totalCount > 0 ? (cashCount / totalCount) * 100 : 0;
+
     return {
-      totalReceived: payments.reduce((sum, p) => sum + p.amountPaid.toNumber(), 0),
+      totalReceived,
+      totalCount,
+      reconciliation: {
+        bankTransfer: {
+          total: transferTotal,
+          count: transferCount,
+          percentAmount: Math.round(transferPercentAmount * 10) / 10,
+          percentCount: Math.round(transferPercentCount * 10) / 10,
+        },
+        cash: {
+          total: cashTotal,
+          count: cashCount,
+          percentAmount: Math.round(cashPercentAmount * 10) / 10,
+          percentCount: Math.round(cashPercentCount * 10) / 10,
+        },
+      },
       byMethod: Array.from(byMethod.values()).sort((a, b) => a.name.localeCompare(b.name)),
     };
   },
@@ -254,10 +293,42 @@ export const reportService = {
       byRoom.set(key, entry);
     }
 
+    const quarterlyMap = new Map<
+      string,
+      { roomId: string; roomNumber: string; q1: number; q2: number; q3: number; q4: number; total: number }
+    >();
+
+    for (const record of records) {
+      if (!record.room) continue;
+      const rId = record.room.id;
+      const rNum = record.room.number;
+      const entry = quarterlyMap.get(rId) ?? {
+        roomId: rId,
+        roomNumber: rNum,
+        q1: 0,
+        q2: 0,
+        q3: 0,
+        q4: 0,
+        total: 0,
+      };
+
+      const month = record.date.getMonth();
+      if (month <= 2) entry.q1 += 1;
+      else if (month <= 5) entry.q2 += 1;
+      else if (month <= 8) entry.q3 += 1;
+      else entry.q4 += 1;
+
+      entry.total += 1;
+      quarterlyMap.set(rId, entry);
+    }
+
+    const quarterlyByRoom = Array.from(quarterlyMap.values()).sort((a, b) => b.total - a.total);
+
     return {
       count: records.length,
       totalCost: records.reduce((sum, r) => sum + (r.cost?.toNumber() ?? 0), 0),
       byRoom: Array.from(byRoom.values()).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber)),
+      quarterlyByRoom,
     };
   },
 
@@ -277,11 +348,52 @@ export const reportService = {
 
     const byStatus: Record<IncidentStatus, number> = { OPEN: 0, IN_PROGRESS: 0, RESOLVED: 0 };
     const byCategory: Partial<Record<IncidentCategory, number>> = {};
+    const resolutionTimesByCategory = new Map<IncidentCategory, number[]>();
+    const allResolutionTimes: number[] = [];
+
     for (const incident of incidents) {
       byStatus[incident.status] += 1;
       byCategory[incident.category] = (byCategory[incident.category] ?? 0) + 1;
+
+      if (incident.status === 'RESOLVED') {
+        const diffMs = Math.max(0, incident.updatedAt.getTime() - incident.date.getTime());
+        const hours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+        const list = resolutionTimesByCategory.get(incident.category) ?? [];
+        list.push(hours);
+        resolutionTimesByCategory.set(incident.category, list);
+        allResolutionTimes.push(hours);
+      }
     }
 
-    return { total: incidents.length, byStatus, byCategory };
+    const total = incidents.length;
+    const categoryStats = Object.entries(byCategory)
+      .map(([cat, count]) => {
+        const category = cat as IncidentCategory;
+        const resTimes = resolutionTimesByCategory.get(category) ?? [];
+        const avgRes =
+          resTimes.length > 0
+            ? Math.round((resTimes.reduce((s, h) => s + h, 0) / resTimes.length) * 10) / 10
+            : null;
+        return {
+          category,
+          count: count ?? 0,
+          percentage: total > 0 ? Math.round(((count ?? 0) / total) * 1000) / 10 : 0,
+          avgResolutionHours: avgRes,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    const avgResolutionHoursOverall =
+      allResolutionTimes.length > 0
+        ? Math.round((allResolutionTimes.reduce((s, h) => s + h, 0) / allResolutionTimes.length) * 10) / 10
+        : null;
+
+    return {
+      total,
+      byStatus,
+      byCategory,
+      categoryStats,
+      avgResolutionHoursOverall,
+    };
   },
 };
