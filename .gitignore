@@ -20,7 +20,13 @@
 .env
 .env*.local
 .env.prod
+.env.docker
 !.env.example
+!.env.docker.example
+
+# Agent skill test credentials — never commit real values
+.agent/skills/**/resources/credentials.json
+.agent/skills/**/resources/*.local.json
 
 # Debug
 npm-debug.log*

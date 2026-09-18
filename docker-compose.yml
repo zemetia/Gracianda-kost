@@ -4,15 +4,17 @@ services:
     container_name: gracianda-kost-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: gracianda
-      POSTGRES_PASSWORD: REDACTED
-      POSTGRES_DB: gracianda_kost
+      # Never hardcode credentials here. Copy .env.docker.example -> .env.docker
+      # (gitignored) and fill in POSTGRES_PASSWORD, or export it in your shell.
+      POSTGRES_USER: ${POSTGRES_USER:-gracianda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - set it in .env.docker or your shell}
+      POSTGRES_DB: ${POSTGRES_DB:-gracianda_kost}
     ports:
       - '5434:5432'
     volumes:
       - gracianda_kost_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U gracianda -d gracianda_kost']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-gracianda} -d ${POSTGRES_DB:-gracianda_kost}']
       interval: 5s
       timeout: 5s
       retries: 10
