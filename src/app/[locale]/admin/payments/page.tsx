@@ -122,7 +122,21 @@ export default async function PaymentsPage({ searchParams }: Props) {
         {canManage && <GenerateInvoicesForm />}
       </div>
 
-      <PaymentStatusBar payments={payments} />
+      <PaymentStatusBar
+        payments={payments.map((payment) => ({
+          id: payment.id,
+          dueDate: payment.dueDate,
+          periodMonth: payment.periodMonth,
+          periodYear: payment.periodYear,
+          amountDue: payment.amountDue.toNumber(),
+          amountPaid: payment.amountPaid.toNumber(),
+          contract: {
+            contractCode: payment.contract.contractCode,
+            tenant: { fullName: payment.contract.tenant.fullName, phone: payment.contract.tenant.phone },
+            room: { number: payment.contract.room.number },
+          },
+        }))}
+      />
 
       {/* Bucket tabs: how many, and how much money is still out there.
           Hairline-separated columns — the active one is marked by type, not a box. */}

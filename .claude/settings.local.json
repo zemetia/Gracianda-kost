@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/## Contract/,/^---$/' docs/blueprint/DATABASE.md)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

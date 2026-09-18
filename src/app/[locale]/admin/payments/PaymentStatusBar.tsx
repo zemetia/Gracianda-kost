@@ -3,12 +3,25 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { formatDate, formatNumber, formatPercent, formatRupiah } from '@/lib/utils';
 import { classifyPaymentForBreakdown } from '@/lib/payment-status';
-import type { PaymentListItem } from '@/services/payment.service';
 import { SendWaButton } from './SendWaButton';
 import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 
+export interface PaymentStatusBarItem {
+  id: string;
+  dueDate: Date;
+  periodMonth: number;
+  periodYear: number;
+  amountDue: number;
+  amountPaid: number;
+  contract: {
+    contractCode: string;
+    tenant: { fullName: string; phone: string };
+    room: { number: string };
+  };
+}
+
 interface Props {
-  payments: PaymentListItem[];
+  payments: PaymentStatusBarItem[];
 }
 
 export function PaymentStatusBar({ payments }: Props) {
@@ -21,7 +34,7 @@ export function PaymentStatusBar({ payments }: Props) {
     due.setHours(0, 0, 0, 0);
 
     const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const outstanding = Math.max(payment.amountDue.toNumber() - payment.amountPaid.toNumber(), 0);
+    const outstanding = Math.max(payment.amountDue - payment.amountPaid, 0);
     const statusCategory = classifyPaymentForBreakdown(payment, today);
 
     return {
@@ -177,8 +190,8 @@ export function PaymentStatusBar({ payments }: Props) {
                           roomNumber={payment.contract.room.number}
                           periodMonth={payment.periodMonth}
                           periodYear={payment.periodYear}
-                          amountDue={payment.amountDue.toNumber()}
-                          amountPaid={payment.amountPaid.toNumber()}
+                          amountDue={payment.amountDue}
+                          amountPaid={payment.amountPaid}
                           dueDate={payment.dueDate}
                         />
                       </div>
