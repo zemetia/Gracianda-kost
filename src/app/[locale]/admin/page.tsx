@@ -1,16 +1,18 @@
 import { Badge } from '@/components/ui/Badge';
 import { MetricBlock, MetricInline, MetricRow } from '@/components/ui/Metric';
-import { Money } from '@/components/ui/Money';
 import { getSession } from '@/lib/auth';
 import { getPropertyScope } from '@/lib/property-scope';
-import { formatDate, formatNumber, formatPercent, formatRupiah, formatRupiahShort } from '@/lib/utils';
+import { formatDate, formatNumber, formatPercent, formatRupiah } from '@/lib/utils';
 import { dashboardService } from '@/services/dashboard.service';
 
 import { ActionQueue } from './ActionQueue';
 import { CostBreakdownCard } from './CostBreakdownCard';
+import { DashboardPanel } from './DashboardPanel';
 import { HeadcountChart } from './HeadcountChart';
+import { MaintenanceIncidentChart } from './MaintenanceIncidentChart';
 import { QuarterlyFinancialCard } from './QuarterlyFinancialCard';
-import { RevenueChart } from './RevenueChart';
+import { QuarterRevenueCostChart } from './QuarterRevenueCostChart';
+import { ScheduleWidget } from './ScheduleWidget';
 
 // These mirror the layout guards of the pages each metric links to
 // (contracts/layout.tsx, master-data/layout.tsx, …) — a metric that leads to
@@ -20,6 +22,8 @@ const CAN_SEE_MAINTENANCE = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
 const CAN_SEE_INCIDENTS = ['SUPER_ADMIN', 'SECURITY', 'OPERASIONAL'];
 const CAN_SEE_ROOMS = ['SUPER_ADMIN', 'OPERASIONAL'];
 const CAN_SEE_CONTRACTS = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
+// Mirrors admin/schedule/page.tsx's own layout guard.
+const CAN_SEE_SCHEDULE = ['SUPER_ADMIN', 'OPERASIONAL', 'KEUANGAN'];
 
 /** Percentage change, or null when there is no baseline to compare against. */
 function delta(current: number, previous: number): number | null {
@@ -40,6 +44,7 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   const showFinance = CAN_SEE_FINANCE.includes(role);
   const showMaintenance = CAN_SEE_MAINTENANCE.includes(role);
   const showIncidents = CAN_SEE_INCIDENTS.includes(role);
+  const showSchedule = CAN_SEE_SCHEDULE.includes(role);
 
   // Scope comes from the global switcher in the admin layout; ?propertyId only
   // overrides it for deep links.
@@ -57,6 +62,8 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     headcountTrend,
     costBreakdown,
     quarterlySummary,
+    maintenanceIncidentTrend,
+    schedule,
   ] = await Promise.all([
     dashboardService.getRoomStats(selectedPropertyId),
     dashboardService.getRevenueThisMonth(selectedPropertyId),
@@ -68,6 +75,8 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
     dashboardService.getHeadcountTrend(6, selectedPropertyId),
     dashboardService.getCostBreakdown(selectedPropertyId),
     dashboardService.getQuarterlyFinancialSummary(selectedPropertyId),
+    dashboardService.getMaintenanceIncidentTrend(6, selectedPropertyId),
+    dashboardService.getOperationalSchedule(selectedPropertyId),
   ]);
 
   const scope = selectedPropertyId ? `&propertyId=${selectedPropertyId}` : '';
@@ -89,7 +98,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
   // extra query. A property onboarded this month has no baseline → null, not 0%.
   const previousRevenue = revenueTrend.at(-2)?.total ?? 0;
   const revenueDelta = delta(revenue, previousRevenue);
-  const trendTotal = revenueTrend.reduce((sum, point) => sum + point.total, 0);
 
   const occupancy = roomStats.total > 0 ? (roomStats.occupied / roomStats.total) * 100 : null;
 
@@ -126,8 +134,73 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         <p className="text-xs text-foreground-muted">{formattedDate}</p>
       </header>
 
-      {/* Work list first, numbers second — the admin opens this page to find out
-          what to do, not to admire totals. */}
+      {/* Overview grid — the four things this page exists to answer at a
+          glance (penyewa, keuangan, jadwal, operasional). Responsive:
+          1 column on mobile, 2 on tablet+, so panels never get crushed. */}
+      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <DashboardPanel
+          title="Penyewa per Bulan (Total)"
+          description={`${formatNumber(headcount.totalPeople)} orang bulan ini`}
+          href={`/admin/master-data/rooms?occupancy=occupied${scope}`}
+        >
+          <HeadcountChart data={headcountTrend} />
+        </DashboardPanel>
+
+        {showFinance && (
+          <DashboardPanel
+            title="Sum of Costs and Revenue"
+            description="Dalam jutaan rupiah (Mio), per kuartal"
+            href={`/admin/payments${roomScope}`}
+          >
+            <div className="mb-2 flex items-center gap-4 text-[10px] font-medium text-foreground-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
+                Revenue
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-warning" aria-hidden="true" />
+                Cost
+              </span>
+            </div>
+            <QuarterRevenueCostChart data={quarterlySummary.quarters} />
+          </DashboardPanel>
+        )}
+
+        {showSchedule && (
+          <DashboardPanel title="Jadwal Bulan Ini" href={`/admin/schedule${roomScope}`}>
+            <ScheduleWidget
+              month={schedule.month}
+              year={schedule.year}
+              events={schedule.events}
+              propertyId={selectedPropertyId}
+            />
+          </DashboardPanel>
+        )}
+
+        {(showMaintenance || showIncidents) && (
+          <DashboardPanel
+            title="Maintenance & Kejadian"
+            description="6 bulan terakhir"
+            href="/admin/maintenance"
+          >
+            <div className="mb-2 flex items-center gap-4 text-[10px] font-medium text-foreground-muted">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                Maintenance
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-destructive" aria-hidden="true" />
+                Insiden
+              </span>
+            </div>
+            <MaintenanceIncidentChart data={maintenanceIncidentTrend} />
+          </DashboardPanel>
+        )}
+      </section>
+
+      {/* Perlu Tindakan Hari Ini — di bawah grid overview, tetap di atas
+          rincian metrik (admin-flow principle #1: antrean aksi di atas
+          statistik). */}
       <ActionQueue
         queue={actionQueue}
         propertyId={selectedPropertyId}
@@ -218,20 +291,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         />
       </MetricRow>
 
-      {/* Tren penyewa — chart mendukung angka, tidak menggantikannya */}
-      <section className="flex flex-col gap-6">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-            Tren Penyewa · 6 Bulan
-          </p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-            {formatNumber(headcount.totalPeople)}
-            <span className="ml-1 text-lg font-normal text-foreground-muted">Orang</span>
-          </p>
-        </div>
-        <HeadcountChart data={headcountTrend} />
-      </section>
-
       {/* Keuangan & operasional */}
       {(showFinance || showMaintenance || showIncidents) && (
         <MetricRow columns={3} stacked>
@@ -268,37 +327,19 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         </MetricRow>
       )}
 
-      {/* Tren pendapatan — chart supports the number, never replaces it */}
-      {showFinance && (
-        <section className="flex flex-col gap-8 lg:flex-row lg:gap-12">
-          <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                Tren Pendapatan · 6 Bulan
-              </p>
-              <p className="mt-2">
-                <Money value={trendTotal} size="primary" />
-              </p>
-              <p className="mt-1 text-xs text-foreground-muted">
-                Rata-rata {formatRupiahShort(trendTotal / revenueTrend.length)} per bulan
-              </p>
-            </div>
-            <RevenueChart data={revenueTrend} />
+      {/* Status Laporan Insiden — rincian buka/proses/selesai, di luar tren
+          yang sudah tampil di panel Maintenance & Kejadian */}
+      {showIncidents && (
+        <section className="max-w-md">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+            Status Laporan Insiden
+          </p>
+          <div className="mt-4">
+            <MetricInline label="Terbuka" value={formatNumber(incidents.open)} />
+            <MetricInline label="Proses" value={formatNumber(incidents.inProgress)} />
+            <MetricInline label="Selesai" value={formatNumber(incidents.resolved)} />
+            <MetricInline label="Total bulan ini" value={formatNumber(incidents.total)} />
           </div>
-
-          {showIncidents && (
-            <div className="lg:w-72 lg:shrink-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                Status Laporan Insiden
-              </p>
-              <div className="mt-4">
-                <MetricInline label="Terbuka" value={formatNumber(incidents.open)} />
-                <MetricInline label="Proses" value={formatNumber(incidents.inProgress)} />
-                <MetricInline label="Selesai" value={formatNumber(incidents.resolved)} />
-                <MetricInline label="Total bulan ini" value={formatNumber(incidents.total)} />
-              </div>
-            </div>
-          )}
         </section>
       )}
 
@@ -316,20 +357,6 @@ export default async function AdminDashboardPage({ searchParams }: Props) {
         </section>
       )}
 
-      {/* Insiden tanpa akses keuangan — panel berdiri sendiri */}
-      {!showFinance && showIncidents && (
-        <section>
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-            Status Laporan Insiden
-          </p>
-          <div className="mt-4 max-w-md">
-            <MetricInline label="Terbuka" value={formatNumber(incidents.open)} />
-            <MetricInline label="Proses" value={formatNumber(incidents.inProgress)} />
-            <MetricInline label="Selesai" value={formatNumber(incidents.resolved)} />
-            <MetricInline label="Total bulan ini" value={formatNumber(incidents.total)} />
-          </div>
-        </section>
-      )}
     </div>
   );
 }

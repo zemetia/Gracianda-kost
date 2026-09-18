@@ -452,6 +452,34 @@ export const dashboardService = {
     );
   },
 
+  // Last `count` periods, oldest first — feeds the dashboard maintenance &
+  // incident trend chart. Mirrors getRevenueTrend's rolling-window shape
+  // rather than getYearlyOperationalFrequency's fixed Jan–Dec year, so the
+  // dashboard always shows "the last 6 months" regardless of current month.
+  async getMaintenanceIncidentTrend(count = 6, propertyId?: string) {
+    const now = new Date();
+    const periods = Array.from({ length: count }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1);
+      return { month: d.getMonth() + 1, year: d.getFullYear() };
+    });
+
+    return Promise.all(
+      periods.map(async (period) => {
+        const start = new Date(period.year, period.month - 1, 1);
+        const end = new Date(period.year, period.month, 1);
+        const [maintenanceCount, incidentCount] = await Promise.all([
+          prisma.maintenanceRecord.count({
+            where: { date: { gte: start, lt: end }, propertyId: propertyId || undefined },
+          }),
+          prisma.incident.count({
+            where: { date: { gte: start, lt: end }, propertyId: propertyId || undefined },
+          }),
+        ]);
+        return { ...period, maintenanceCount, incidentCount };
+      }),
+    );
+  },
+
   async getCostBreakdown(propertyId?: string, targetDate = new Date()): Promise<CostBreakdownComparison> {
     const prevDate = new Date(targetDate.getFullYear(), targetDate.getMonth() - 1, 1);
     const [current, previous] = await Promise.all([
